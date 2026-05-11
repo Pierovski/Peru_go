@@ -1,0 +1,146 @@
+body, html {
+    margin: 0; padding: 0;
+    height: 100%; width: 100%;
+    font-family: 'Montserrat', sans-serif;
+    overflow: hidden;
+    background-image: url('./assets/img/fondo.jpg');
+    background-size: cover;
+    background-position: center;
+    background-color: #0a1118;
+}
+
+#pantalla-acceso {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100vh;
+    z-index: 9999; display: flex;
+    justify-content: center; align-items: center;
+    transition: opacity 0.8s ease;
+    background: rgba(0, 0, 0, 0.85);
+}
+
+.acceso-flotante { display: flex; flex-direction: column; align-items: center; }
+#avatar-guia { width: 150px; margin-bottom: 20px; animation: flotar 3s ease-in-out infinite; }
+@keyframes flotar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+.instruccion { 
+    font-weight: 900; text-transform: uppercase; font-size: 0.8rem; margin-bottom: 5px; 
+    background: linear-gradient(90deg, #FF1493, #00FA9A, #FFD700, #00FFFF, #FF1493);
+    background-size: 300% 100%;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    animation: gradienteChicha 3s linear infinite;
+}
+
+.input-wrapper { width: 180px; margin-bottom: 20px; position: relative; padding-bottom: 5px; }
+.input-wrapper::after {
+    content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px;
+    background: linear-gradient(90deg, #FF1493, #00FA9A, #FFD700, #00FFFF, #FF1493);
+    background-size: 300% 100%;
+    animation: gradienteChicha 3s linear infinite;
+}
+
+#pass { width: 100%; background: transparent; border: none; color: white; text-align: center; font-size: 1.2rem; outline: none; }
+
+#btn-ingresar {
+    padding: 12px 35px; border: none; border-radius: 50px; font-weight: 900; cursor: pointer;
+    text-transform: uppercase; color: #000;
+    background: linear-gradient(90deg, #FF1493, #00FA9A, #FFD700, #00FFFF, #FF1493);
+    background-size: 300% 100%; animation: gradienteChicha 3s linear infinite;
+}
+
+/* --- TÍTULOS --- */
+#titulo-mapa, #titulo-departamento {
+    position: fixed; left: 50%;
+    transform: translateX(-50%) skewY(-2deg);
+    z-index: 1000; display: none;
+    font-family: 'Paytone One', sans-serif; 
+    white-space: nowrap; 
+    background: linear-gradient(90deg, #FF1493, #00FA9A, #FFD700, #00FFFF, #FF1493);
+    background-size: 400% 100%;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(3px 3px 0px #000);
+    animation: gradienteChicha 4s linear infinite;
+    margin: 0;
+}
+
+#titulo-mapa { top: 15px; font-size: clamp(2.5rem, 8vw, 3.5rem); }
+#titulo-departamento { top: 75px; font-size: clamp(1.8rem, 6vw, 2.5rem); text-transform: uppercase; }
+
+@keyframes gradienteChicha { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+
+#map { height: 100vh; width: 100%; display: none; background: transparent; }
+
+/* --- BOTONES FLOTANTES ALINEADOS --- */
+.btn-flotante, .btn-flotante-volver {
+    position: fixed; z-index: 1001; background: rgba(0,0,0,0.7);
+    border-radius: 50%; color: white; cursor: pointer;
+    display: flex; justify-content: center; align-items: center;
+}
+/* Botón Mute (Izquierda) */
+.btn-flotante { 
+    bottom: 125px; left: 20px; 
+    width: 40px; height: 40px; border: 1.5px solid #f1c40f; 
+}
+/* Botón Volver (Derecha, mismo tamaño y altura) */
+.btn-flotante-volver { 
+    bottom: 125px; right: 20px; left: auto; /* El left: auto anula cualquier regla anterior */
+    width: 40px; height: 40px; border: 2px solid #00FA9A; font-size: 1.2rem; 
+}
+
+/* --- BARRA DE PROGRESO --- */
+#contenedor-progreso {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    width: 80%; max-width: 500px; z-index: 1000; display: none;
+}
+#barra-fondo { width: 100%; height: 12px; background: rgba(0, 0, 0, 0.7); border-radius: 10px; border: 1.5px solid #f1c40f; overflow: hidden; }
+#barra-relleno { height: 100%; width: 0%; background: linear-gradient(90deg, #FF1493, #00FA9A, #FFD700); transition: width 0.5s ease; }
+#mascota-progreso {
+    position: absolute; bottom: 8px; left: 0%; transform: translateX(-50%) scaleX(-1); 
+    width: 55px; transition: left 0.5s ease; animation: caminarMascota 0.4s ease-in-out infinite alternate;
+}
+@keyframes caminarMascota { 0% { bottom: 8px; } 100% { bottom: 14px; } }
+#texto-progreso { position: absolute; top: 18px; right: 0; color: #fff; font-weight: 900; text-shadow: 1px 1px 2px #000; }
+
+/* --- PANTALLA DE INFO --- */
+#pantalla-info {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+    background: rgba(10, 17, 24, 0.95); z-index: 10000;
+    display: flex; justify-content: center; align-items: center;
+}
+.info-contenido {
+    width: 90%; max-width: 600px; height: 80vh; background: #111;
+    border: 3px solid transparent; border-radius: 30px; position: relative;
+    padding: 30px; overflow-y: auto; text-align: center;
+    box-shadow: 0 0 20px rgba(255,255,255,0.1); 
+}
+#btn-cerrar-info {
+    position: absolute; top: 15px; right: 15px; background: #FF1493;
+    border: none; border-radius: 50%; width: 40px; height: 40px;
+    color: white; font-weight: 900; cursor: pointer;
+}
+.lugar-card {
+    background: rgba(255,255,255,0.05); margin: 15px 0; padding: 15px;
+    border-radius: 15px; border-left: 5px solid #00FFFF; text-align: left;
+}
+.lugar-card h3 { color: #00FA9A; margin: 0; font-size: 1rem; }
+.lugar-card p { color: #ddd; font-size: 0.9rem; margin: 5px 0 0; }
+
+/* --- ETIQUETAS DENTRO DE LOS POLÍGONOS --- */
+.etiqueta-provincia {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-family: 'Paytone One', sans-serif;
+    font-size: clamp(0.6rem, 1.5vw, 0.75rem) !important; 
+    text-shadow: 2px 2px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000, 1px 1px 0px #000;
+    text-transform: uppercase;
+    padding: 0;
+    white-space: normal !important; 
+    text-align: center;
+    width: max-content;
+    max-width: fit-content;
+    line-height: 1.1;
+}
+.leaflet-tooltip-left::before, .leaflet-tooltip-right::before, 
+.leaflet-tooltip-top::before, .leaflet-tooltip-bottom::before {
+    display: none !important; 
+}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Perú Go - Personal</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a1118">
+    <link rel="apple-touch-icon" href="./assets/img/mascota-feliz.webp">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Paytone+One&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="pantalla-acceso">
+        <div class="acceso-flotante">
+            <img src="./assets/img/mascota-hola.webp" id="avatar-guia" alt="Guía">
+            <p class="instruccion">Clave de Expedición</p>
+            <div class="input-wrapper">
+                <input type="password" id="pass" placeholder="••••">
+            </div>
+            <button id="btn-ingresar">Entrar</button>
+        </div>
+    </div>
+
+    <div id="pantalla-info" style="display: none;">
+        <div class="info-contenido" id="panel-tarjeta-viajes">
+            <button id="btn-cerrar-info">✖</button>
+            <h2 id="info-provincia-titulo" class="titulo-chicha">PROVINCIA</h2>
+            <div id="info-lugares">
+                <p style="color: white; font-size: 1.2rem;">Cargando bitácora de viaje...</p>
+            </div>
+        </div>
+    </div>
+
+    <h1 id="titulo-mapa" class="titulo-chicha">PERÚ <span class="go-text">GO</span></h1>
+    <h2 id="titulo-departamento" class="titulo-chicha"></h2>
+    
+    <button id="btn-volver" class="btn-flotante-volver" style="display: none;">🔙</button>
+    <div id="map"></div>
+    <button id="btn-mute" class="btn-flotante">🔊</button>
+
+    <div id="contenedor-progreso">
+        <div id="barra-fondo">
+            <div id="barra-relleno"></div>
+        </div>
+        <img src="./assets/img/mascota-explora.webp" id="mascota-progreso" alt="Explorador">
+        <span id="texto-progreso">0%</span>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('Modo Offline Activado', reg);
+                }).catch(err => console.log('Error en Modo Offline: ', err));
+            });
+        }
+    </script>
+</body>
+</html>
