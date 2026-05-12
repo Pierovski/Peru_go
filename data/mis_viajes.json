@@ -1,0 +1,32 @@
+{
+  "TRUJILLO": [
+    {
+      "nombre": "Tribuna Oriente",
+      "estado": "En progreso 🚧",
+      "fecha": "Abril 2026",
+      "info": "Control topográfico y avance de instalaciones mecánicas."
+    },
+    {
+      "nombre": "Centro Histórico",
+      "estado": "Visitado ✅",
+      "fecha": "Febrero 2026",
+      "info": "Salida a comer ceviche mixto por la tarde."
+    }
+  ],
+  "SANTIAGO DE CHUCO": [
+    {
+      "nombre": "Cachicadán",
+      "estado": "Proyecto 🚜",
+      "fecha": "Mayo 2026",
+      "info": "Control de niveles para las tuberías de drenaje pluvial."
+    }
+  ],
+  "CHICLAYO": [
+    {
+      "nombre": "Ciudad de Chiclayo",
+      "estado": "Visitado ✅",
+      "fecha": "Enero 2026",
+      "info": "Viaje de fin de semana para descansar."
+    }
+  ]
+}
