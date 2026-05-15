@@ -1,8 +1,8 @@
 "use strict";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-// IMPORTAMOS doc y deleteDoc para poder borrar registros
-import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// IMPORTAMOS updateDoc para editar
+import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCx_mw5M7SrUt4hPrF5tOJdb0W6KdKLpLY",
@@ -39,6 +39,7 @@ const textoProgreso = document.getElementById('texto-progreso');
 const btnMostrarFormulario = document.getElementById('btn-mostrar-formulario');
 const formRegistro = document.getElementById('formulario-registro');
 const btnGuardarRegistro = document.getElementById('btn-guardar-registro');
+const btnCancelarEdicion = document.getElementById('btn-cancelar-edicion');
 const mensajeCarga = document.getElementById('mensaje-carga');
 
 const btnFiltro = document.getElementById('btn-filtro');
@@ -56,6 +57,9 @@ let datosProvinciasGenerales = null;
 let mapa;
 let datosGeoJSON = null;
 let datosViajes = {}; 
+
+// ESTADO GLOBAL DE EDICIÓN
+let idEdicionActual = null;
 
 const coloresChichaPremium = [ "#FF1493", "#00FA9A", "#FFD700", "#00FFFF", "#FF4500", "#9400D3" ];
 const audios = [ './assets/audio/musica-uno.mp3', './assets/audio/musica-dos.mp3', './assets/audio/musica-tres.mp3' ];
@@ -75,7 +79,6 @@ async function obtenerViajesDeFirebase() {
             const data = docSnap.data();
             const provLimpia = data.provincia.trim().toUpperCase();
             if (!viajesObj[provLimpia]) viajesObj[provLimpia] = [];
-            // AHORA GUARDAMOS EL ID DEL DOCUMENTO PARA PODER BORRARLO DESPUÉS
             viajesObj[provLimpia].push({ id: docSnap.id, ...data });
         });
     } catch(e) { console.log("Error al cargar de la nube:", e); }
@@ -211,7 +214,8 @@ function abrirInformacionProvincia(nombreOriginal, colorProvincia) {
     tarjetaContenidoInfo.style.borderColor = colorProvincia;
     tarjetaContenidoInfo.style.boxShadow = `0 0 20px ${colorProvincia}`;
     tituloInfoProvincia.style.webkitTextFillColor = colorProvincia; 
-    if(formRegistro) formRegistro.style.display = 'none';
+    
+    limpiarFormulario(); // Cerramos cualquier edición pendiente
     
     renderizarLugares(nombreLimpio, colorProvincia);
     pantallaInfo.style.display = 'flex';
@@ -238,13 +242,15 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
             const tagCompania = `<span class="tag-info tag-compania">${vCompania}</span>`;
             const btnEnlace = lugar.link ? `<br><a href="${lugar.link}" target="_blank" class="btn-link">🔗 Ver Documentación / Vuelo</a>` : '';
             
-            // BOTÓN DE ELIMINAR 
+            // BOTONES CRUD: EDITAR Y ELIMINAR
+            const btnEditar = `<button class="btn-editar" onclick="prepararEdicion('${lugar.id}', '${nombreLimpio}')">✏️</button>`;
             const btnEliminar = `<button class="btn-eliminar" onclick="eliminarRegistro('${lugar.id}', '${nombreLimpio}')">🗑️</button>`;
 
             contenedorLugares.innerHTML += `
                 <div class="lugar-card" style="border-left-color: ${colorProvincia}">
+                    ${btnEditar}
                     ${btnEliminar}
-                    <h3 style="color: #bbb; padding-right: 25px;">${lugar.nombre}</h3>
+                    <h3 style="color: #bbb; padding-right: 55px;">${lugar.nombre}</h3>
                     <div style="margin: 5px 0;">${tagTipo} ${tagCompania}</div>
                     <p>Estado: ${lugar.estado}</p>
                     <p>Fecha: ${lugar.fecha}</p>
@@ -264,33 +270,73 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
     }
 }
 
-// FUNCIÓN GLOBAL PARA ELIMINAR EL REGISTRO DE FIREBASE
-window.eliminarRegistro = async (idDocumento, provinciaLimpia) => {
-    // ELIMINACIÓN DEFENSIVA: Confirmación del usuario
-    if (!confirm("⚠️ ¿Estás seguro de que quieres eliminar esta expedición? Esta acción no se puede deshacer.")) return;
+// LÓGICA DE EDICIÓN: Rellena el formulario
+window.prepararEdicion = (idDocumento, provinciaLimpia) => {
+    const viaje = datosViajes[provinciaLimpia].find(v => v.id === idDocumento);
+    if(!viaje) return;
 
+    idEdicionActual = idDocumento; // Activamos el modo edición
+
+    document.getElementById('nuevo-tipo').value = viaje.tipo || 'PERSONAL';
+    document.getElementById('nueva-compania').value = viaje.compania || 'Solo';
+    document.getElementById('nuevo-nombre').value = viaje.nombre || '';
+    document.getElementById('nuevo-estado').value = viaje.estado || '';
+    document.getElementById('nueva-fecha').value = viaje.fecha || '';
+    document.getElementById('nueva-info').value = viaje.info || '';
+    document.getElementById('nuevo-link').value = viaje.link || '';
+    // Las fotos no se rellenan por seguridad, pero el código sabe que si las dejas vacías, conserva las originales.
+
+    btnGuardarRegistro.innerHTML = '🔄 Actualizar Registro';
+    btnGuardarRegistro.style.background = 'linear-gradient(90deg, #FFD700, #FF4500)';
+    btnCancelarEdicion.style.display = 'block';
+    formRegistro.style.display = 'block';
+    
+    // Hacemos scroll suave hacia el formulario
+    formRegistro.scrollIntoView({ behavior: "smooth" });
+};
+
+// LÓGICA PARA LIMPIAR Y SALIR DE EDICIÓN
+function limpiarFormulario() {
+    idEdicionActual = null;
+    document.getElementById('nuevo-nombre').value = ''; 
+    document.getElementById('nuevo-estado').value = '';
+    document.getElementById('nueva-fecha').value = ''; 
+    document.getElementById('nueva-info').value = '';
+    document.getElementById('nuevo-link').value = '';
+    document.getElementById('foto-1').value = ''; 
+    document.getElementById('foto-2').value = '';
+    
+    btnGuardarRegistro.innerHTML = '💾 Guardar en la Nube';
+    btnGuardarRegistro.style.background = 'linear-gradient(90deg, #00FFFF, #00FA9A)';
+    btnCancelarEdicion.style.display = 'none';
+    formRegistro.style.display = 'none';
+}
+
+if (btnCancelarEdicion) {
+    btnCancelarEdicion.onclick = limpiarFormulario;
+}
+
+window.eliminarRegistro = async (idDocumento, provinciaLimpia) => {
+    if (!confirm("⚠️ ¿Estás seguro de que quieres eliminar esta expedición? Esta acción no se puede deshacer.")) return;
     try {
-        // Borramos el documento de la nube en Firebase
         await deleteDoc(doc(db, "viajes", idDocumento));
-        
-        // Lo borramos de nuestra memoria local
         datosViajes[provinciaLimpia] = datosViajes[provinciaLimpia].filter(v => v.id !== idDocumento);
-        
-        // Repintamos la pantalla de información
         const colorPanel = tituloInfoProvincia.style.webkitTextFillColor;
         renderizarLugares(provinciaLimpia, colorPanel);
         
-        // Repintamos el mapa y las barras de progreso por si la provincia quedó vacía
         if(capaProvincias) { capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); }
         actualizarProgresoGlobal();
-
-    } catch(e) {
-        alert("Ocurrió un error al intentar eliminar: " + e.message);
-    }
+    } catch(e) { alert("Ocurrió un error al intentar eliminar: " + e.message); }
 };
 
 if (btnMostrarFormulario) {
-    btnMostrarFormulario.onclick = () => { formRegistro.style.display = formRegistro.style.display === 'none' ? 'block' : 'none'; };
+    btnMostrarFormulario.onclick = () => { 
+        if(formRegistro.style.display === 'block' && idEdicionActual) {
+            limpiarFormulario(); // Si estaba editando y presiona el botón principal, cancela.
+        } else {
+            formRegistro.style.display = formRegistro.style.display === 'none' ? 'block' : 'none'; 
+        }
+    };
 }
 
 if (btnGuardarRegistro) {
@@ -311,21 +357,38 @@ if (btnGuardarRegistro) {
         mensajeCarga.style.display = 'block';
 
         try {
+            const provinciaActual = tituloInfoProvincia.innerText.trim().toUpperCase();
+            
+            // LÓGICA DE FOTOS INTELIGENTE
             let url1 = "", url2 = "";
+            let viajePrevio = null;
+
+            if (idEdicionActual) {
+                viajePrevio = datosViajes[provinciaActual].find(v => v.id === idEdicionActual);
+                url1 = viajePrevio.foto1 || ""; // Rescatamos las viejas
+                url2 = viajePrevio.foto2 || "";
+            }
+
+            // Si el usuario sube fotos nuevas, sobrescribimos. Si no, se quedan las rescatadas.
             if (foto1) url1 = await subirFotoImgBB(foto1);
             if (foto2) url2 = await subirFotoImgBB(foto2);
 
-            const provinciaActual = tituloInfoProvincia.innerText.trim().toUpperCase();
-            const nuevoRegistro = { 
+            const registroData = { 
                 provincia: provinciaActual, tipo, compania, nombre, estado, fecha, info, link, foto1: url1, foto2: url2 
             };
 
-            // AGREGAMOS EL ID RECIÉN CREADO POR FIREBASE AL OBJETO LOCAL PARA PODER BORRARLO SIN RECARGAR LA PÁGINA
-            const docRef = await addDoc(collection(db, "viajes"), nuevoRegistro);
-            nuevoRegistro.id = docRef.id;
-
-            if (!datosViajes[provinciaActual]) datosViajes[provinciaActual] = [];
-            datosViajes[provinciaActual].push(nuevoRegistro);
+            if (idEdicionActual) {
+                // MODO ACTUALIZAR
+                await updateDoc(doc(db, "viajes", idEdicionActual), registroData);
+                const index = datosViajes[provinciaActual].findIndex(v => v.id === idEdicionActual);
+                datosViajes[provinciaActual][index] = { id: idEdicionActual, ...registroData };
+            } else {
+                // MODO CREAR NUEVO
+                const docRef = await addDoc(collection(db, "viajes"), registroData);
+                registroData.id = docRef.id;
+                if (!datosViajes[provinciaActual]) datosViajes[provinciaActual] = [];
+                datosViajes[provinciaActual].push(registroData);
+            }
             
             const colorPanel = tituloInfoProvincia.style.webkitTextFillColor;
             renderizarLugares(provinciaActual, colorPanel);
@@ -333,11 +396,7 @@ if (btnGuardarRegistro) {
             if(capaProvincias) { capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); }
             actualizarProgresoGlobal();
 
-            document.getElementById('nuevo-nombre').value = ''; document.getElementById('nuevo-estado').value = '';
-            document.getElementById('nueva-fecha').value = ''; document.getElementById('nueva-info').value = '';
-            document.getElementById('nuevo-link').value = '';
-            document.getElementById('foto-1').value = ''; document.getElementById('foto-2').value = '';
-            formRegistro.style.display = 'none';
+            limpiarFormulario(); // Resetea todo
 
         } catch (error) { alert("Ocurrió un error al guardar: " + error.message); }
 

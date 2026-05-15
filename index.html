@@ -67,14 +67,16 @@
                 <textarea id="nueva-info" placeholder="Detalles de la expedición..." class="input-chicha"></textarea>
                 <input type="url" id="nuevo-link" placeholder="Enlace externo (Drone, Civil 3D, Drive...)" class="input-chicha">
                 
-                <p style="color: #00FA9A; font-size: 0.8rem; margin: 5px 0; text-align: left;">Adjuntar Fotos (Opcional):</p>
+                <p style="color: #00FA9A; font-size: 0.8rem; margin: 5px 0; text-align: left;">Adjuntar Fotos (Deja en blanco para conservar las actuales):</p>
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                     <input type="file" id="foto-1" accept="image/*" class="file-chicha">
                     <input type="file" id="foto-2" accept="image/*" class="file-chicha">
                 </div>
                 
                 <button id="btn-guardar-registro" class="btn-chicha" style="background: linear-gradient(90deg, #00FFFF, #00FA9A);">💾 Guardar en la Nube</button>
-                <p id="mensaje-carga" style="color: #FFD700; font-weight: bold; display: none; margin-top: 10px;">Subiendo a la nube, no cierres... ⏳</p>
+                <button id="btn-cancelar-edicion" class="btn-chicha" style="display: none; background: #FF4500; margin-top: 10px; color: white;">❌ Cancelar Edición</button>
+                
+                <p id="mensaje-carga" style="color: #FFD700; font-weight: bold; display: none; margin-top: 10px;">Procesando en la nube, no cierres... ⏳</p>
             </div>
         </div>
     </div>
@@ -102,9 +104,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    console.log('Modo Offline Activado');
-                }).catch(err => console.log('Error en SW: ', err));
+                navigator.serviceWorker.register('./sw.js');
             });
         }
     </script>
