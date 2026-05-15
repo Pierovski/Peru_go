@@ -23,6 +23,9 @@ const tituloInfoProvincia = document.getElementById('info-provincia-titulo');
 const contenedorLugares = document.getElementById('info-lugares');
 const btnCerrarInfo = document.getElementById('btn-cerrar-info');
 
+// NUEVO: Pantalla de Carga
+const pantallaCarga = document.getElementById('pantalla-carga');
+
 const pantallaDashboard = document.getElementById('pantalla-dashboard');
 const btnCerrarDashboard = document.getElementById('btn-cerrar-dashboard');
 const contenidoDashboard = document.getElementById('contenido-dashboard');
@@ -47,44 +50,29 @@ const btnGuardarRegistro = document.getElementById('btn-guardar-registro');
 const btnCancelarEdicion = document.getElementById('btn-cancelar-edicion');
 const mensajeCarga = document.getElementById('mensaje-carga');
 
-// LÓGICA DE DOS MUNDOS (FORMULARIO)
 const selectTipo = document.getElementById('nuevo-tipo');
 const camposTrabajo = document.getElementById('campos-trabajo');
 const camposPersonal = document.getElementById('campos-personal');
 
 selectTipo.addEventListener('change', () => {
     if (selectTipo.value === 'TRABAJO') {
-        camposTrabajo.style.display = 'block';
-        camposPersonal.style.display = 'none';
+        camposTrabajo.style.display = 'block'; camposPersonal.style.display = 'none';
     } else {
-        camposTrabajo.style.display = 'none';
-        camposPersonal.style.display = 'block';
+        camposTrabajo.style.display = 'none'; camposPersonal.style.display = 'block';
     }
 });
 
-// VARIABLES DE ESTADO DEL FORMULARIO
 let idEdicionActual = null;
-let seleccionClima = '';
-let seleccionTransporte = '';
+let seleccionClima = ''; let seleccionTransporte = '';
 let estrellasValor = { comida: 0, gastro: 0, hosp: 0, atrac: 0 };
 
-// CONTROLADORES DE BOTONERAS VISUALES
 document.querySelectorAll('#selector-clima .btn-opcion').forEach(btn => {
-    btn.onclick = () => {
-        document.querySelectorAll('#selector-clima .btn-opcion').forEach(b => b.classList.remove('seleccionado'));
-        btn.classList.add('seleccionado');
-        seleccionClima = btn.dataset.valor;
-    };
+    btn.onclick = () => { document.querySelectorAll('#selector-clima .btn-opcion').forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); seleccionClima = btn.dataset.valor; };
 });
 document.querySelectorAll('#selector-transporte .btn-opcion').forEach(btn => {
-    btn.onclick = () => {
-        document.querySelectorAll('#selector-transporte .btn-opcion').forEach(b => b.classList.remove('seleccionado'));
-        btn.classList.add('seleccionado');
-        seleccionTransporte = btn.dataset.valor;
-    };
+    btn.onclick = () => { document.querySelectorAll('#selector-transporte .btn-opcion').forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); seleccionTransporte = btn.dataset.valor; };
 });
 
-// CONTROLADORES DE ESTRELLAS
 function inicializarEstrellas(contenedorId, claveValor) {
     const contenedor = document.getElementById(contenedorId);
     const estrellas = contenedor.querySelectorAll('span');
@@ -95,10 +83,8 @@ function inicializarEstrellas(contenedorId, claveValor) {
         };
     });
 }
-inicializarEstrellas('estrellas-comida', 'comida');
-inicializarEstrellas('estrellas-gastro', 'gastro');
-inicializarEstrellas('estrellas-hosp', 'hosp');
-inicializarEstrellas('estrellas-atrac', 'atrac');
+inicializarEstrellas('estrellas-comida', 'comida'); inicializarEstrellas('estrellas-gastro', 'gastro');
+inicializarEstrellas('estrellas-hosp', 'hosp'); inicializarEstrellas('estrellas-atrac', 'atrac');
 
 function resetUIFormulario() {
     document.querySelectorAll('.btn-opcion').forEach(b => b.classList.remove('seleccionado'));
@@ -106,13 +92,8 @@ function resetUIFormulario() {
     seleccionClima = ''; seleccionTransporte = ''; estrellasValor = { comida: 0, gastro: 0, hosp: 0, atrac: 0 };
 }
 
-let filtroActualMundo = 'TODOS';
-let indiceFiltro = 0;
-const estadosFiltro = [
-    { valor: 'TODOS', icono: '🌍', color: '#00FFFF' },
-    { valor: 'TRABAJO', icono: '🚜', color: '#FF4500' },
-    { valor: 'PERSONAL', icono: '🍹', color: '#00FA9A' }
-];
+let filtroActualMundo = 'TODOS'; let indiceFiltro = 0;
+const estadosFiltro = [ { valor: 'TODOS', icono: '🌍', color: '#00FFFF' }, { valor: 'TRABAJO', icono: '🚜', color: '#FF4500' }, { valor: 'PERSONAL', icono: '🍹', color: '#00FA9A' } ];
 
 let capaNacional; let capaProvincias; let mapa; let datosGeoJSON = null;
 let datosProvinciasGenerales = null; let datosViajes = {}; 
@@ -141,7 +122,14 @@ async function obtenerViajesDeFirebase() {
 function inicializarMapa() {
     mapa = L.map('map', { zoomControl: false, dragging: true, scrollWheelZoom: true, doubleClickZoom: false, touchZoom: true, attributionControl: false }).setView([-9.5, -75.01], 5.0);
     Promise.all([ obtenerViajesDeFirebase(), fetch('./data/peru_provincial_simple.geojson').then(r => r.json()), fetch('./data/peru_departamental_simple.geojson').then(r => r.json()) ])
-    .then(([viajesFirebase, provs, deps]) => { datosViajes = viajesFirebase; datosProvinciasGenerales = provs; datosGeoJSON = deps; dibujarMapaNacional(); actualizarProgresoGlobal(); });
+    .then(([viajesFirebase, provs, deps]) => { 
+        datosViajes = viajesFirebase; datosProvinciasGenerales = provs; datosGeoJSON = deps; 
+        dibujarMapaNacional(); actualizarProgresoGlobal(); 
+        
+        // APAGA LA PANTALLA DE CARGA CUANDO EL MAPA ESTÁ LISTO
+        pantallaCarga.style.display = 'none';
+        btnMute.style.display = 'flex'; btnFiltro.style.display = 'flex'; btnDashboard.style.display = 'flex';
+    });
 }
 
 function dibujarMapaNacional() {
@@ -199,10 +187,8 @@ if (btnFiltro) {
     };
 }
 
-// CÁLCULO DE DASHBOARD INTELIGENTE
 btnDashboard.onclick = () => {
     let totProyectos = 0; let totPersonales = 0; let platosDestacados = []; let provVisitadas = new Set();
-    
     Object.keys(datosViajes).forEach(prov => {
         datosViajes[prov].forEach(viaje => {
             provVisitadas.add(prov);
@@ -210,7 +196,6 @@ btnDashboard.onclick = () => {
             if (viaje.platoDestacado) platosDestacados.push(viaje.platoDestacado);
         });
     });
-
     const totProvinciasPais = datosProvinciasGenerales ? datosProvinciasGenerales.features.length : 196;
     const porcExplorado = Math.round((provVisitadas.size / totProvinciasPais) * 100) || 0;
 
@@ -229,6 +214,24 @@ async function subirFotoImgBB(file) {
     try { const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const data = await res.json(); return data.data.url; } catch (e) { throw new Error("Error imagen"); }
 }
 
+// NUEVA FUNCIÓN: Acordeón y Lazy Loading
+window.toggleAcordeon = (id) => {
+    const body = document.getElementById('body-' + id);
+    const flecha = document.getElementById('flecha-' + id);
+    if (body.classList.contains('abierto')) {
+        body.classList.remove('abierto'); flecha.classList.remove('rotada');
+    } else {
+        body.classList.add('abierto'); flecha.classList.add('rotada');
+        // Lazy Loading: Solo descarga la foto si tocas la tarjeta
+        const fotos = body.querySelectorAll('.lazy-foto');
+        fotos.forEach(img => {
+            if (!img.src || img.src === window.location.href || img.src.includes('undefined')) {
+                img.src = img.getAttribute('data-src'); img.style.opacity = '1';
+            }
+        });
+    }
+};
+
 function abrirInformacionProvincia(nombreOriginal, colorProvincia) {
     const nombreLimpio = nombreOriginal.trim().toUpperCase();
     tituloInfoProvincia.innerText = nombreOriginal; tarjetaContenidoInfo.style.borderColor = colorProvincia; tarjetaContenidoInfo.style.boxShadow = `0 0 20px ${colorProvincia}`; tituloInfoProvincia.style.webkitTextFillColor = colorProvincia; 
@@ -244,9 +247,10 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
         lugares.forEach(lugar => {
             let htmlFotos = '';
             if (lugar.foto1 || lugar.foto2) {
-                htmlFotos = `<div style="display: flex; gap: 4%; margin-top: 10px;">`;
-                if(lugar.foto1) htmlFotos += `<img src="${lugar.foto1}" class="foto-viaje" onclick="window.open('${lugar.foto1}')">`;
-                if(lugar.foto2) htmlFotos += `<img src="${lugar.foto2}" class="foto-viaje" onclick="window.open('${lugar.foto2}')">`;
+                htmlFotos = `<div style="display: flex; gap: 4%; margin-top: 15px;">`;
+                // LAS FOTOS NACEN VACÍAS GRACIAS AL LAZY-FOTO
+                if(lugar.foto1) htmlFotos += `<img data-src="${lugar.foto1}" src="" class="foto-viaje lazy-foto" onclick="window.open('${lugar.foto1}')">`;
+                if(lugar.foto2) htmlFotos += `<img data-src="${lugar.foto2}" src="" class="foto-viaje lazy-foto" onclick="window.open('${lugar.foto2}')">`;
                 htmlFotos += `</div>`;
             }
 
@@ -255,12 +259,11 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
             const tagCompania = `<span class="tag-info tag-compania">${vCompania}</span>`;
             const btnEnlace = lugar.link ? `<br><a href="${lugar.link}" target="_blank" class="btn-link">🔗 Vuelo / Docs</a>` : '';
             
-            // GENERAR ESTRELLAS VISUALES
-            const genStars = (num) => '★'.repeat(num) + '<span style="color:#444;">' + '★'.repeat(5-num) + '</span>';
+            const btnEditar = `<button class="btn-editar" onclick="event.stopPropagation(); prepararEdicion('${lugar.id}', '${nombreLimpio}')">✏️</button>`;
+            const btnEliminar = `<button class="btn-eliminar" onclick="event.stopPropagation(); eliminarRegistro('${lugar.id}', '${nombreLimpio}')">🗑️</button>`;
 
+            const genStars = (num) => '★'.repeat(num) + '<span style="color:#444;">' + '★'.repeat(5-num) + '</span>';
             let detallesEspecificos = '';
-            // Si el registro es viejo y solo tiene "estado", lo muestra. Si es nuevo, muestra la info detallada.
-            let fallbackEstado = lugar.estado ? `<p><strong>Estado:</strong> ${lugar.estado}</p>` : '';
 
             if (vTipo === 'TRABAJO') {
                 const climaIcon = lugar.clima ? `<span style="font-size:1.2rem;">${lugar.clima}</span>` : '';
@@ -273,25 +276,31 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
                 const gas = lugar.gastro ? `<strong>Gastronomía:</strong> <span style="color:#FFD700;">${genStars(lugar.gastro)}</span><br>` : '';
                 const hos = lugar.hosp ? `<strong>Hospedaje:</strong> <span style="color:#FFD700;">${genStars(lugar.hosp)}</span><br>` : '';
                 const atr = lugar.atrac ? `<strong>Atractivos:</strong> <span style="color:#FFD700;">${genStars(lugar.atrac)}</span>` : '';
-                detallesEspecificos = `<p style="font-size:0.85rem;">${plato}${gas}${hos}${atr} ${transIcon}</p>`;
+                detallesEspecificos = `<p style="font-size:0.85rem;">${plato}${gas}${hos}${atr} <br>${transIcon}</p>`;
             }
 
+            // ESTRUCTURA DE ACORDEÓN
             contenedorLugares.innerHTML += `
                 <div class="lugar-card" style="border-left-color: ${colorProvincia}">
-                    <button class="btn-editar" onclick="prepararEdicion('${lugar.id}', '${nombreLimpio}')">✏️</button>
-                    <button class="btn-eliminar" onclick="eliminarRegistro('${lugar.id}', '${nombreLimpio}')">🗑️</button>
-                    <h3 style="color: #bbb; padding-right: 55px;">${lugar.nombre}</h3>
-                    <div style="margin: 5px 0;">${tagTipo} ${tagCompania}</div>
-                    <p><strong>Fecha:</strong> ${lugar.fecha || ''}</p>
-                    ${fallbackEstado}
-                    ${detallesEspecificos}
-                    <p style="color: #bbb; margin-top: 8px;"><em>${lugar.info}</em></p>
-                    ${btnEnlace}
-                    ${htmlFotos}
+                    <div class="tarjeta-header" onclick="toggleAcordeon('${lugar.id}')">
+                        <h3>${lugar.nombre}</h3>
+                        <div class="flecha-acordeon" id="flecha-${lugar.id}">▼</div>
+                    </div>
+                    
+                    <div class="tarjeta-body" id="body-${lugar.id}">
+                        ${btnEditar}
+                        ${btnEliminar}
+                        <div style="margin-bottom: 5px;">${tagTipo} ${tagCompania}</div>
+                        <p><strong>Fecha:</strong> ${lugar.fecha || ''}</p>
+                        ${detallesEspecificos}
+                        <p style="color: #bbb; margin-top: 8px;"><em>${lugar.info}</em></p>
+                        ${btnEnlace}
+                        ${htmlFotos}
+                    </div>
                 </div>
             `;
         });
-    } else { contenedorLugares.innerHTML = `<div class="lugar-card" style="border-left-color: #FF4500;"><h3>📍 Zona por explorar</h3><p>No hay registros aquí.</p></div>`; }
+    } else { contenedorLugares.innerHTML = `<div class="lugar-card" style="border-left-color: #FF4500; padding:15px;"><h3>📍 Zona por explorar</h3><p>No hay registros aquí.</p></div>`; }
 }
 
 window.prepararEdicion = (idDocumento, provinciaLimpia) => {
@@ -301,7 +310,7 @@ window.prepararEdicion = (idDocumento, provinciaLimpia) => {
     idEdicionActual = idDocumento; resetUIFormulario();
 
     document.getElementById('nuevo-tipo').value = viaje.tipo || 'PERSONAL';
-    selectTipo.dispatchEvent(new Event('change')); // Fuerza el cambio visual
+    selectTipo.dispatchEvent(new Event('change'));
     
     document.getElementById('nueva-compania').value = viaje.compania || 'Solo';
     document.getElementById('nuevo-nombre').value = viaje.nombre || '';
@@ -309,7 +318,6 @@ window.prepararEdicion = (idDocumento, provinciaLimpia) => {
     document.getElementById('nueva-info').value = viaje.info || '';
     document.getElementById('nuevo-link').value = viaje.link || '';
     
-    // Rellenar datos específicos
     if(viaje.tipo === 'TRABAJO') {
         if(viaje.tipoProyecto) document.getElementById('nuevo-tipo-proyecto').value = viaje.tipoProyecto;
         if(viaje.clima) document.querySelector(`#selector-clima .btn-opcion[data-valor="${viaje.clima}"]`)?.click();
@@ -377,17 +385,12 @@ if (btnGuardarRegistro) {
 
             let registroData = { provincia: provinciaActual, tipo, compania, nombre, fecha, info, link, foto1: url1, foto2: url2 };
 
-            // Inyectamos la data según el mundo elegido
             if (tipo === 'TRABAJO') {
                 registroData.tipoProyecto = document.getElementById('nuevo-tipo-proyecto').value;
-                registroData.clima = seleccionClima;
-                registroData.comida = estrellasValor.comida;
+                registroData.clima = seleccionClima; registroData.comida = estrellasValor.comida;
             } else {
-                registroData.transporte = seleccionTransporte;
-                registroData.platoDestacado = document.getElementById('nuevo-plato').value;
-                registroData.gastro = estrellasValor.gastro;
-                registroData.hosp = estrellasValor.hosp;
-                registroData.atrac = estrellasValor.atrac;
+                registroData.transporte = seleccionTransporte; registroData.platoDestacado = document.getElementById('nuevo-plato').value;
+                registroData.gastro = estrellasValor.gastro; registroData.hosp = estrellasValor.hosp; registroData.atrac = estrellasValor.atrac;
             }
 
             if (idEdicionActual) {
@@ -441,8 +444,10 @@ btnIngresar.onclick = () => {
         setTimeout(() => {
             pantallaAcceso.style.opacity = '0';
             setTimeout(() => {
-                pantallaAcceso.style.display = 'none'; contenedorMapa.style.display = 'block'; tituloMapa.style.display = 'block';
-                btnMute.style.display = 'flex'; btnFiltro.style.display = 'flex'; btnDashboard.style.display = 'flex';
+                pantallaAcceso.style.display = 'none'; 
+                // ENCIENDE LA PANTALLA DE CARGA
+                pantallaCarga.style.display = 'flex';
+                contenedorMapa.style.display = 'block'; tituloMapa.style.display = 'block';
                 contenedorProgreso.style.display = 'block';
                 reproducirMusicaAleatoria(); inicializarMapa();
             }, 800);

@@ -14,6 +14,14 @@ body, html {
 #avatar-guia { width: 150px; margin-bottom: 20px; animation: flotar 3s ease-in-out infinite; }
 @keyframes flotar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
+/* SPINNER PARA PANTALLA DE CARGA */
+.spinner-chicha {
+    width: 40px; height: 40px; border: 4px solid rgba(255, 20, 147, 0.3);
+    border-top: 4px solid #00FFFF; border-radius: 50%;
+    animation: girar 1s linear infinite;
+}
+@keyframes girar { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
 .instruccion { 
     font-weight: 900; text-transform: uppercase; font-size: 0.8rem; margin-bottom: 5px; 
     background: linear-gradient(90deg, #FF1493, #00FA9A, #FFD700, #00FFFF, #FF1493);
@@ -74,11 +82,27 @@ body, html {
     border: 3px solid transparent; border-radius: 30px; position: relative;
     padding: 30px; overflow-y: auto; text-align: center; box-shadow: 0 0 20px rgba(255,255,255,0.1); 
 }
+
+/* --- NUEVO: SISTEMA DE TARJETAS ACORDEÓN --- */
 .lugar-card {
-    background: rgba(255,255,255,0.05); margin: 15px 0; padding: 15px;
+    background: rgba(255,255,255,0.05); margin: 15px 0; padding: 0 15px;
     border-radius: 15px; border-left: 5px solid #00FFFF; text-align: left; position: relative;
+    overflow: hidden;
 }
-.lugar-card h3 { color: #00FA9A; margin: 0; font-size: 1rem; padding-right: 55px; }
+.tarjeta-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 0; cursor: pointer; border-bottom: 1px dashed transparent;
+    transition: border-color 0.3s;
+}
+.tarjeta-body {
+    display: none; padding-bottom: 15px; transition: all 0.3s ease;
+}
+.tarjeta-body.abierto { display: block; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px; }
+
+.flecha-acordeon { font-size: 1rem; color: #00FFFF; transition: transform 0.3s; }
+.flecha-acordeon.rotada { transform: rotate(180deg); }
+
+.lugar-card h3 { color: #00FA9A; margin: 0; font-size: 1rem; width: 85%; }
 .lugar-card p { color: #ddd; font-size: 0.85rem; margin: 5px 0 0; }
 
 .etiqueta-provincia {
@@ -113,7 +137,15 @@ body, html {
 }
 .btn-chicha:active { transform: scale(0.95); }
 .file-chicha { border: 1px dashed #00FA9A; font-size: 0.7rem; color: #aaa; }
-.foto-viaje { width: 48%; border-radius: 8px; border: 2px solid #00FFFF; object-fit: cover; aspect-ratio: 1; cursor: pointer; }
+
+/* NUEVO: ESTILO PARA LAZY LOADING DE FOTOS */
+.foto-viaje { 
+    width: 48%; border-radius: 8px; border: 2px solid #00FFFF; 
+    object-fit: cover; aspect-ratio: 1; cursor: pointer;
+}
+.lazy-foto {
+    opacity: 0; transition: opacity 0.5s ease-in-out; background: #222;
+}
 
 .tag-info {
     display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.7rem;
@@ -130,20 +162,19 @@ body, html {
 }
 .btn-link:hover { background: rgba(255, 215, 0, 0.3); }
 
-/* BOTONES CRUD */
+/* LOS BOTONES CRUD AHORA ESTÁN DENTRO DEL BODY DE LA TARJETA */
 .btn-eliminar {
-    position: absolute; top: 10px; right: 10px; background: transparent; border: none;
+    position: absolute; bottom: 15px; right: 15px; background: transparent; border: none;
     font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(255, 0, 0, 0.5));
 }
 .btn-eliminar:hover { transform: scale(1.2); opacity: 1; }
 
 .btn-editar {
-    position: absolute; top: 10px; right: 40px; background: transparent; border: none;
+    position: absolute; bottom: 15px; right: 55px; background: transparent; border: none;
     font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(0, 255, 255, 0.5));
 }
 .btn-editar:hover { transform: scale(1.2); opacity: 1; }
 
-/* NUEVO: ESTILOS PARA ESTRELLAS Y SELECTORES VISUALES */
 .botonera-opciones { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .btn-opcion {
     background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px;
@@ -155,7 +186,6 @@ body, html {
 .contenedor-estrellas span { transition: color 0.2s; }
 .contenedor-estrellas span.activa { color: #FFD700; text-shadow: 0 0 10px #FFD700; }
 
-/* DASHBOARD STATS */
 .stat-box {
     background: rgba(255,255,255,0.05); border-left: 5px solid #FF1493;
     padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
