@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perugo-cache-v1';
+const CACHE_NAME = 'perugo-cache-v1.1';
 const urlsToCache = [
     './',
     './index.html',
@@ -7,7 +7,6 @@ const urlsToCache = [
     './manifest.json',
     './data/peru_departamental_simple.geojson',
     './data/peru_provincial_simple.geojson',
-    './data/mis_viajes.json',
     './assets/img/fondo.jpg',
     './assets/img/mascota-hola.webp',
     './assets/img/mascota-explora.webp',
