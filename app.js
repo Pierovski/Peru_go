@@ -23,11 +23,17 @@ const tituloInfoProvincia = document.getElementById('info-provincia-titulo');
 const contenedorLugares = document.getElementById('info-lugares');
 const btnCerrarInfo = document.getElementById('btn-cerrar-info');
 
+const pantallaDashboard = document.getElementById('pantalla-dashboard');
+const btnCerrarDashboard = document.getElementById('btn-cerrar-dashboard');
+const contenidoDashboard = document.getElementById('contenido-dashboard');
+
 const btnIngresar = document.getElementById('btn-ingresar');
 const inputPass = document.getElementById('pass');
 const pantallaAcceso = document.getElementById('pantalla-acceso');
 const contenedorMapa = document.getElementById('map');
 const btnMute = document.getElementById('btn-mute');
+const btnFiltro = document.getElementById('btn-filtro');
+const btnDashboard = document.getElementById('btn-dashboard');
 const avatarGuia = document.getElementById('avatar-guia');
 const tituloMapa = document.getElementById('titulo-mapa');
 const contenedorProgreso = document.getElementById('contenedor-progreso');
@@ -41,7 +47,65 @@ const btnGuardarRegistro = document.getElementById('btn-guardar-registro');
 const btnCancelarEdicion = document.getElementById('btn-cancelar-edicion');
 const mensajeCarga = document.getElementById('mensaje-carga');
 
-const btnFiltro = document.getElementById('btn-filtro');
+// LÓGICA DE DOS MUNDOS (FORMULARIO)
+const selectTipo = document.getElementById('nuevo-tipo');
+const camposTrabajo = document.getElementById('campos-trabajo');
+const camposPersonal = document.getElementById('campos-personal');
+
+selectTipo.addEventListener('change', () => {
+    if (selectTipo.value === 'TRABAJO') {
+        camposTrabajo.style.display = 'block';
+        camposPersonal.style.display = 'none';
+    } else {
+        camposTrabajo.style.display = 'none';
+        camposPersonal.style.display = 'block';
+    }
+});
+
+// VARIABLES DE ESTADO DEL FORMULARIO
+let idEdicionActual = null;
+let seleccionClima = '';
+let seleccionTransporte = '';
+let estrellasValor = { comida: 0, gastro: 0, hosp: 0, atrac: 0 };
+
+// CONTROLADORES DE BOTONERAS VISUALES
+document.querySelectorAll('#selector-clima .btn-opcion').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('#selector-clima .btn-opcion').forEach(b => b.classList.remove('seleccionado'));
+        btn.classList.add('seleccionado');
+        seleccionClima = btn.dataset.valor;
+    };
+});
+document.querySelectorAll('#selector-transporte .btn-opcion').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('#selector-transporte .btn-opcion').forEach(b => b.classList.remove('seleccionado'));
+        btn.classList.add('seleccionado');
+        seleccionTransporte = btn.dataset.valor;
+    };
+});
+
+// CONTROLADORES DE ESTRELLAS
+function inicializarEstrellas(contenedorId, claveValor) {
+    const contenedor = document.getElementById(contenedorId);
+    const estrellas = contenedor.querySelectorAll('span');
+    estrellas.forEach((estrella, idx) => {
+        estrella.onclick = () => {
+            estrellasValor[claveValor] = idx + 1;
+            estrellas.forEach((e, i) => { e.classList.toggle('activa', i <= idx); });
+        };
+    });
+}
+inicializarEstrellas('estrellas-comida', 'comida');
+inicializarEstrellas('estrellas-gastro', 'gastro');
+inicializarEstrellas('estrellas-hosp', 'hosp');
+inicializarEstrellas('estrellas-atrac', 'atrac');
+
+function resetUIFormulario() {
+    document.querySelectorAll('.btn-opcion').forEach(b => b.classList.remove('seleccionado'));
+    document.querySelectorAll('.contenedor-estrellas span').forEach(s => s.classList.remove('activa'));
+    seleccionClima = ''; seleccionTransporte = ''; estrellasValor = { comida: 0, gastro: 0, hosp: 0, atrac: 0 };
+}
+
 let filtroActualMundo = 'TODOS';
 let indiceFiltro = 0;
 const estadosFiltro = [
@@ -50,22 +114,14 @@ const estadosFiltro = [
     { valor: 'PERSONAL', icono: '🍹', color: '#00FA9A' }
 ];
 
-let capaNacional; 
-let capaProvincias; 
-let datosProvinciasGenerales = null; 
-let mapa;
-let datosGeoJSON = null;
-let datosViajes = {}; 
-let idEdicionActual = null;
+let capaNacional; let capaProvincias; let mapa; let datosGeoJSON = null;
+let datosProvinciasGenerales = null; let datosViajes = {}; 
 
 const coloresChichaPremium = [ "#FF1493", "#00FA9A", "#FFD700", "#00FFFF", "#FF4500", "#9400D3" ];
 const audios = [ './assets/audio/musica-uno.mp3', './assets/audio/musica-dos.mp3', './assets/audio/musica-tres.mp3' ];
 const audioAmbiental = new Audio();
 
-function reproducirMusicaAleatoria() {
-    audioAmbiental.src = audios[Math.floor(Math.random() * audios.length)];
-    audioAmbiental.play().catch(() => console.log("Audio bloqueado"));
-}
+function reproducirMusicaAleatoria() { audioAmbiental.src = audios[Math.floor(Math.random() * audios.length)]; audioAmbiental.play().catch(() => {}); }
 audioAmbiental.addEventListener('ended', reproducirMusicaAleatoria);
 
 async function obtenerViajesDeFirebase() {
@@ -78,27 +134,14 @@ async function obtenerViajesDeFirebase() {
             if (!viajesObj[provLimpia]) viajesObj[provLimpia] = [];
             viajesObj[provLimpia].push({ id: docSnap.id, ...data });
         });
-    } catch(e) { console.log("Error al cargar de la nube:", e); }
+    } catch(e) {}
     return viajesObj;
 }
 
 function inicializarMapa() {
-    mapa = L.map('map', {
-        zoomControl: false, dragging: true, scrollWheelZoom: true,
-        doubleClickZoom: false, touchZoom: true, attributionControl: false
-    }).setView([-9.5, -75.01], 5.0);
-
-    Promise.all([
-        obtenerViajesDeFirebase(),
-        fetch('./data/peru_provincial_simple.geojson').then(res => res.json()),
-        fetch('./data/peru_departamental_simple.geojson').then(res => res.json())
-    ]).then(([viajesFirebase, provs, deps]) => {
-        datosViajes = viajesFirebase;
-        datosProvinciasGenerales = provs;
-        datosGeoJSON = deps;
-        dibujarMapaNacional();
-        actualizarProgresoGlobal(); 
-    }).catch(err => console.log("Error de carga:", err));
+    mapa = L.map('map', { zoomControl: false, dragging: true, scrollWheelZoom: true, doubleClickZoom: false, touchZoom: true, attributionControl: false }).setView([-9.5, -75.01], 5.0);
+    Promise.all([ obtenerViajesDeFirebase(), fetch('./data/peru_provincial_simple.geojson').then(r => r.json()), fetch('./data/peru_departamental_simple.geojson').then(r => r.json()) ])
+    .then(([viajesFirebase, provs, deps]) => { datosViajes = viajesFirebase; datosProvinciasGenerales = provs; datosGeoJSON = deps; dibujarMapaNacional(); actualizarProgresoGlobal(); });
 }
 
 function dibujarMapaNacional() {
@@ -106,7 +149,6 @@ function dibujarMapaNacional() {
         style: function (feature) {
             const nombreDepLimpio = feature.properties.NOMBDEP.trim().toUpperCase();
             const provsDelDep = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio);
-            
             let tieneVisita = false;
             for(let p of provsDelDep) {
                 let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
@@ -115,61 +157,33 @@ function dibujarMapaNacional() {
                     if(filtrados.length > 0) { tieneVisita = true; break; }
                 }
             }
-
-            if (tieneVisita) {
-                const c = coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length];
-                return { color: c, weight: 3, fillColor: c, fillOpacity: 0.35, className: 'poligono-vidrio' };
-            } else {
-                return { color: "#f1c40f", weight: 1, fillColor: "transparent", fillOpacity: 0 };
-            }
+            if (tieneVisita) { return { color: coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length], weight: 3, fillColor: coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length], fillOpacity: 0.35, className: 'poligono-vidrio' }; } 
+            else { return { color: "#f1c40f", weight: 1, fillColor: "transparent", fillOpacity: 0 }; }
         },
         onEachFeature: function (feature, layer) {
             layer.on('click', function () {
                 const nombreDep = feature.properties.NOMBDEP;
-                const nombreDepLimpio = nombreDep.trim().toUpperCase();
                 layer.setStyle({ color: "#FFFFFF", weight: 4, fillOpacity: 0.5 });
-
                 setTimeout(() => {
                     mapa.removeLayer(capaNacional);
-                    const filtradas = {
-                        type: "FeatureCollection",
-                        features: datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio)
-                    };
-
+                    const filtradas = { type: "FeatureCollection", features: datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDep.trim().toUpperCase()) };
                     capaProvincias = L.geoJSON(filtradas, {
                         style: function(fProv) {
-                            const nombreProv = fProv.properties.NOMBPROV;
-                            const provLimpia = nombreProv.trim().toUpperCase();
-                            const c = coloresChichaPremium[nombreProv.length % coloresChichaPremium.length];
-                            
+                            const provLimpia = fProv.properties.NOMBPROV.trim().toUpperCase();
+                            const c = coloresChichaPremium[fProv.properties.NOMBPROV.length % coloresChichaPremium.length];
                             let tieneVisita = false;
-                            if (datosViajes[provLimpia]) {
-                                const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
-                                if(filtrados.length > 0) tieneVisita = true;
-                            }
-
-                            if (tieneVisita) {
-                                return { color: c, weight: 3, fillColor: c, fillOpacity: 0.35, className: 'poligono-vidrio' };
-                            } else {
-                                return { color: c, weight: 1, fillColor: "#000", fillOpacity: 0.4, dashArray: "4 5" };
-                            }
+                            if (datosViajes[provLimpia]) { const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo); if(filtrados.length > 0) tieneVisita = true; }
+                            if (tieneVisita) { return { color: c, weight: 3, fillColor: c, fillOpacity: 0.35, className: 'poligono-vidrio' }; } else { return { color: c, weight: 1, fillColor: "#000", fillOpacity: 0.4, dashArray: "4 5" }; }
                         },
                         onEachFeature: function(fP, lP) {
                             const nombreProv = fP.properties.NOMBPROV;
-                            const colorAsignado = coloresChichaPremium[nombreProv.length % coloresChichaPremium.length];
-                            lP.bindTooltip(`<span style="color: ${colorAsignado};">${nombreProv}</span>`, {
-                                permanent: true, direction: 'center', className: 'etiqueta-provincia', interactive: false 
-                            });
-                            lP.on('click', () => abrirInformacionProvincia(nombreProv, colorAsignado));
+                            const c = coloresChichaPremium[nombreProv.length % coloresChichaPremium.length];
+                            lP.bindTooltip(`<span style="color: ${c};">${nombreProv}</span>`, { permanent: true, direction: 'center', className: 'etiqueta-provincia', interactive: false });
+                            lP.on('click', () => abrirInformacionProvincia(nombreProv, c));
                         }
                     }).addTo(mapa);
-
                     mapa.fitBounds(layer.getBounds());
-                    tituloMapa.style.display = 'none';
-                    tituloDepartamento.innerText = nombreDep; 
-                    tituloDepartamento.style.display = 'block';
-                    btnVolver.style.display = 'flex';
-                    actualizarProgresoDepartamental(nombreDepLimpio);
+                    tituloMapa.style.display = 'none'; tituloDepartamento.innerText = nombreDep; tituloDepartamento.style.display = 'block'; btnVolver.style.display = 'flex'; actualizarProgresoDepartamental(nombreDep.trim().toUpperCase());
                 }, 400);
             });
         }
@@ -178,44 +192,47 @@ function dibujarMapaNacional() {
 
 if (btnFiltro) {
     btnFiltro.onclick = () => {
-        indiceFiltro = (indiceFiltro + 1) % estadosFiltro.length;
-        filtroActualMundo = estadosFiltro[indiceFiltro].valor;
-        btnFiltro.innerText = estadosFiltro[indiceFiltro].icono;
-        btnFiltro.style.borderColor = estadosFiltro[indiceFiltro].color;
-        btnFiltro.style.boxShadow = `0 0 10px ${estadosFiltro[indiceFiltro].color}`;
-
-        if (capaNacional && (!btnVolver.style.display || btnVolver.style.display === 'none')) {
-            capaNacional.eachLayer(layer => capaNacional.resetStyle(layer));
-            actualizarProgresoGlobal();
-        } else if (capaProvincias) {
-            capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer));
-            const nombreDepLimpio = tituloDepartamento.innerText.trim().toUpperCase();
-            actualizarProgresoDepartamental(nombreDepLimpio);
-        }
+        indiceFiltro = (indiceFiltro + 1) % estadosFiltro.length; filtroActualMundo = estadosFiltro[indiceFiltro].valor;
+        btnFiltro.innerText = estadosFiltro[indiceFiltro].icono; btnFiltro.style.borderColor = estadosFiltro[indiceFiltro].color; btnFiltro.style.boxShadow = `0 0 10px ${estadosFiltro[indiceFiltro].color}`;
+        if (capaNacional && (!btnVolver.style.display || btnVolver.style.display === 'none')) { capaNacional.eachLayer(layer => capaNacional.resetStyle(layer)); actualizarProgresoGlobal(); } 
+        else if (capaProvincias) { capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); actualizarProgresoDepartamental(tituloDepartamento.innerText.trim().toUpperCase()); }
     };
 }
 
+// CÁLCULO DE DASHBOARD INTELIGENTE
+btnDashboard.onclick = () => {
+    let totProyectos = 0; let totPersonales = 0; let platosDestacados = []; let provVisitadas = new Set();
+    
+    Object.keys(datosViajes).forEach(prov => {
+        datosViajes[prov].forEach(viaje => {
+            provVisitadas.add(prov);
+            if (viaje.tipo === 'TRABAJO') totProyectos++; else totPersonales++;
+            if (viaje.platoDestacado) platosDestacados.push(viaje.platoDestacado);
+        });
+    });
+
+    const totProvinciasPais = datosProvinciasGenerales ? datosProvinciasGenerales.features.length : 196;
+    const porcExplorado = Math.round((provVisitadas.size / totProvinciasPais) * 100) || 0;
+
+    contenidoDashboard.innerHTML = `
+        <div class="stat-box"><div>Tus Proyectos Activos/Obra:</div> <span class="numero">${totProyectos}</span></div>
+        <div class="stat-box"><div>Salidas Personales Registradas:</div> <span class="numero">${totPersonales}</span></div>
+        <div class="stat-box"><div>Provincias Exploradas:</div> <span class="numero">${provVisitadas.size} <span style="font-size:0.8rem; color:#fff;">(${porcExplorado}%)</span></span></div>
+        <div class="stat-box" style="border-left-color: #00FA9A;"><div>Platos Regionales Probados:</div> <span class="numero">${platosDestacados.length}</span></div>
+    `;
+    pantallaDashboard.style.display = 'flex';
+};
+btnCerrarDashboard.onclick = () => { pantallaDashboard.style.display = 'none'; };
+
 async function subirFotoImgBB(file) {
-    const formData = new FormData();
-    formData.append('image', file);
-    try {
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
-        const data = await res.json();
-        return data.data.url; 
-    } catch (e) { throw new Error("No se pudo subir la imagen."); }
+    const fd = new FormData(); fd.append('image', file);
+    try { const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const data = await res.json(); return data.data.url; } catch (e) { throw new Error("Error imagen"); }
 }
 
 function abrirInformacionProvincia(nombreOriginal, colorProvincia) {
     const nombreLimpio = nombreOriginal.trim().toUpperCase();
-    tituloInfoProvincia.innerText = nombreOriginal;
-    tarjetaContenidoInfo.style.borderColor = colorProvincia;
-    tarjetaContenidoInfo.style.boxShadow = `0 0 20px ${colorProvincia}`;
-    tituloInfoProvincia.style.webkitTextFillColor = colorProvincia; 
-    
-    limpiarFormulario(); 
-    
-    renderizarLugares(nombreLimpio, colorProvincia);
-    pantallaInfo.style.display = 'flex';
+    tituloInfoProvincia.innerText = nombreOriginal; tarjetaContenidoInfo.style.borderColor = colorProvincia; tarjetaContenidoInfo.style.boxShadow = `0 0 20px ${colorProvincia}`; tituloInfoProvincia.style.webkitTextFillColor = colorProvincia; 
+    limpiarFormulario(); renderizarLugares(nombreLimpio, colorProvincia); pantallaInfo.style.display = 'flex';
 }
 
 function renderizarLugares(nombreLimpio, colorProvincia) {
@@ -223,7 +240,7 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
     let lugares = datosViajes[nombreLimpio] || [];
     lugares = lugares.filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
     
-    if (lugares && lugares.length > 0) {
+    if (lugares.length > 0) {
         lugares.forEach(lugar => {
             let htmlFotos = '';
             if (lugar.foto1 || lugar.foto2) {
@@ -233,100 +250,105 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
                 htmlFotos += `</div>`;
             }
 
-            const vTipo = lugar.tipo || 'PERSONAL';
-            const vCompania = lugar.compania || 'Solo';
+            const vTipo = lugar.tipo || 'PERSONAL'; const vCompania = lugar.compania || 'Solo';
             const tagTipo = vTipo === 'TRABAJO' ? '<span class="tag-info tag-trabajo">🚜 Trabajo</span>' : '<span class="tag-info tag-personal">🍹 Personal</span>';
             const tagCompania = `<span class="tag-info tag-compania">${vCompania}</span>`;
-            const btnEnlace = lugar.link ? `<br><a href="${lugar.link}" target="_blank" class="btn-link">🔗 Ver Documentación / Vuelo</a>` : '';
+            const btnEnlace = lugar.link ? `<br><a href="${lugar.link}" target="_blank" class="btn-link">🔗 Vuelo / Docs</a>` : '';
             
-            const btnEditar = `<button class="btn-editar" onclick="prepararEdicion('${lugar.id}', '${nombreLimpio}')">✏️</button>`;
-            const btnEliminar = `<button class="btn-eliminar" onclick="eliminarRegistro('${lugar.id}', '${nombreLimpio}')">🗑️</button>`;
+            // GENERAR ESTRELLAS VISUALES
+            const genStars = (num) => '★'.repeat(num) + '<span style="color:#444;">' + '★'.repeat(5-num) + '</span>';
+
+            let detallesEspecificos = '';
+            // Si el registro es viejo y solo tiene "estado", lo muestra. Si es nuevo, muestra la info detallada.
+            let fallbackEstado = lugar.estado ? `<p><strong>Estado:</strong> ${lugar.estado}</p>` : '';
+
+            if (vTipo === 'TRABAJO') {
+                const climaIcon = lugar.clima ? `<span style="font-size:1.2rem;">${lugar.clima}</span>` : '';
+                const proy = lugar.tipoProyecto ? `<strong>Proyecto:</strong> ${lugar.tipoProyecto}<br>` : '';
+                const com = lugar.comida ? `<strong>Comida:</strong> <span style="color:#FFD700;">${genStars(lugar.comida)}</span><br>` : '';
+                detallesEspecificos = `<p style="font-size:0.85rem;">${proy}${com} ${climaIcon}</p>`;
+            } else {
+                const transIcon = lugar.transporte ? `<span style="font-size:1.2rem;">${lugar.transporte}</span>` : '';
+                const plato = lugar.platoDestacado ? `<strong>Plato:</strong> ${lugar.platoDestacado}<br>` : '';
+                const gas = lugar.gastro ? `<strong>Gastronomía:</strong> <span style="color:#FFD700;">${genStars(lugar.gastro)}</span><br>` : '';
+                const hos = lugar.hosp ? `<strong>Hospedaje:</strong> <span style="color:#FFD700;">${genStars(lugar.hosp)}</span><br>` : '';
+                const atr = lugar.atrac ? `<strong>Atractivos:</strong> <span style="color:#FFD700;">${genStars(lugar.atrac)}</span>` : '';
+                detallesEspecificos = `<p style="font-size:0.85rem;">${plato}${gas}${hos}${atr} ${transIcon}</p>`;
+            }
 
             contenedorLugares.innerHTML += `
                 <div class="lugar-card" style="border-left-color: ${colorProvincia}">
-                    ${btnEditar}
-                    ${btnEliminar}
+                    <button class="btn-editar" onclick="prepararEdicion('${lugar.id}', '${nombreLimpio}')">✏️</button>
+                    <button class="btn-eliminar" onclick="eliminarRegistro('${lugar.id}', '${nombreLimpio}')">🗑️</button>
                     <h3 style="color: #bbb; padding-right: 55px;">${lugar.nombre}</h3>
                     <div style="margin: 5px 0;">${tagTipo} ${tagCompania}</div>
-                    <p>Estado: ${lugar.estado}</p>
-                    <p>Fecha: ${lugar.fecha}</p>
+                    <p><strong>Fecha:</strong> ${lugar.fecha || ''}</p>
+                    ${fallbackEstado}
+                    ${detallesEspecificos}
                     <p style="color: #bbb; margin-top: 8px;"><em>${lugar.info}</em></p>
                     ${btnEnlace}
                     ${htmlFotos}
                 </div>
             `;
         });
-    } else {
-        contenedorLugares.innerHTML = `
-            <div class="lugar-card" style="border-left-color: #FF4500;">
-                <h3>📍 Zona por explorar</h3>
-                <p>No hay registros que coincidan con tu filtro actual en esta provincia.</p>
-            </div>
-        `;
-    }
+    } else { contenedorLugares.innerHTML = `<div class="lugar-card" style="border-left-color: #FF4500;"><h3>📍 Zona por explorar</h3><p>No hay registros aquí.</p></div>`; }
 }
 
 window.prepararEdicion = (idDocumento, provinciaLimpia) => {
     const viaje = datosViajes[provinciaLimpia].find(v => v.id === idDocumento);
     if(!viaje) return;
 
-    idEdicionActual = idDocumento;
+    idEdicionActual = idDocumento; resetUIFormulario();
 
     document.getElementById('nuevo-tipo').value = viaje.tipo || 'PERSONAL';
+    selectTipo.dispatchEvent(new Event('change')); // Fuerza el cambio visual
+    
     document.getElementById('nueva-compania').value = viaje.compania || 'Solo';
     document.getElementById('nuevo-nombre').value = viaje.nombre || '';
-    document.getElementById('nuevo-estado').value = viaje.estado || '';
     document.getElementById('nueva-fecha').value = viaje.fecha || '';
     document.getElementById('nueva-info').value = viaje.info || '';
     document.getElementById('nuevo-link').value = viaje.link || '';
-
-    btnGuardarRegistro.innerHTML = '🔄 Actualizar Registro';
-    btnGuardarRegistro.style.background = 'linear-gradient(90deg, #FFD700, #FF4500)';
-    btnCancelarEdicion.style.display = 'block';
-    formRegistro.style.display = 'block';
     
-    formRegistro.scrollIntoView({ behavior: "smooth" });
+    // Rellenar datos específicos
+    if(viaje.tipo === 'TRABAJO') {
+        if(viaje.tipoProyecto) document.getElementById('nuevo-tipo-proyecto').value = viaje.tipoProyecto;
+        if(viaje.clima) document.querySelector(`#selector-clima .btn-opcion[data-valor="${viaje.clima}"]`)?.click();
+        if(viaje.comida) document.querySelectorAll('#estrellas-comida span')[viaje.comida-1]?.click();
+    } else {
+        if(viaje.platoDestacado) document.getElementById('nuevo-plato').value = viaje.platoDestacado;
+        if(viaje.transporte) document.querySelector(`#selector-transporte .btn-opcion[data-valor="${viaje.transporte}"]`)?.click();
+        if(viaje.gastro) document.querySelectorAll('#estrellas-gastro span')[viaje.gastro-1]?.click();
+        if(viaje.hosp) document.querySelectorAll('#estrellas-hosp span')[viaje.hosp-1]?.click();
+        if(viaje.atrac) document.querySelectorAll('#estrellas-atrac span')[viaje.atrac-1]?.click();
+    }
+
+    btnGuardarRegistro.innerHTML = '🔄 Actualizar Registro'; btnGuardarRegistro.style.background = 'linear-gradient(90deg, #FFD700, #FF4500)';
+    btnCancelarEdicion.style.display = 'block'; formRegistro.style.display = 'block'; formRegistro.scrollIntoView({ behavior: "smooth" });
 };
 
 function limpiarFormulario() {
-    idEdicionActual = null;
-    document.getElementById('nuevo-nombre').value = ''; 
-    document.getElementById('nuevo-estado').value = '';
-    document.getElementById('nueva-fecha').value = ''; 
-    document.getElementById('nueva-info').value = '';
-    document.getElementById('nuevo-link').value = '';
-    document.getElementById('foto-1').value = ''; 
-    document.getElementById('foto-2').value = '';
+    idEdicionActual = null; resetUIFormulario();
+    document.getElementById('nuevo-nombre').value = ''; document.getElementById('nueva-fecha').value = ''; 
+    document.getElementById('nueva-info').value = ''; document.getElementById('nuevo-link').value = '';
+    document.getElementById('nuevo-plato').value = ''; document.getElementById('foto-1').value = ''; document.getElementById('foto-2').value = '';
+    selectTipo.value = 'PERSONAL'; selectTipo.dispatchEvent(new Event('change'));
     
-    btnGuardarRegistro.innerHTML = '💾 Guardar en la Nube';
-    btnGuardarRegistro.style.background = 'linear-gradient(90deg, #00FFFF, #00FA9A)';
-    btnCancelarEdicion.style.display = 'none';
-    formRegistro.style.display = 'none';
+    btnGuardarRegistro.innerHTML = '💾 Guardar en la Nube'; btnGuardarRegistro.style.background = 'linear-gradient(90deg, #00FFFF, #00FA9A)';
+    btnCancelarEdicion.style.display = 'none'; formRegistro.style.display = 'none';
 }
 
 if (btnCancelarEdicion) { btnCancelarEdicion.onclick = limpiarFormulario; }
 
 window.eliminarRegistro = async (idDocumento, provinciaLimpia) => {
-    if (!confirm("⚠️ ¿Estás seguro de que quieres eliminar esta expedición? Esta acción no se puede deshacer.")) return;
-    try {
-        await deleteDoc(doc(db, "viajes", idDocumento));
-        datosViajes[provinciaLimpia] = datosViajes[provinciaLimpia].filter(v => v.id !== idDocumento);
-        const colorPanel = tituloInfoProvincia.style.webkitTextFillColor;
-        renderizarLugares(provinciaLimpia, colorPanel);
-        
-        if(capaProvincias) { capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); }
-        actualizarProgresoGlobal();
-    } catch(e) { alert("Ocurrió un error al intentar eliminar: " + e.message); }
+    if (!confirm("⚠️ ¿Eliminar esta expedición?")) return;
+    try { await deleteDoc(doc(db, "viajes", idDocumento)); datosViajes[provinciaLimpia] = datosViajes[provinciaLimpia].filter(v => v.id !== idDocumento);
+        renderizarLugares(provinciaLimpia, tituloInfoProvincia.style.webkitTextFillColor);
+        if(capaProvincias) { capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); } actualizarProgresoGlobal();
+    } catch(e) { alert("Error: " + e.message); }
 };
 
 if (btnMostrarFormulario) {
-    btnMostrarFormulario.onclick = () => { 
-        if(formRegistro.style.display === 'block' && idEdicionActual) {
-            limpiarFormulario(); 
-        } else {
-            formRegistro.style.display = formRegistro.style.display === 'none' ? 'block' : 'none'; 
-        }
-    };
+    btnMostrarFormulario.onclick = () => { if(formRegistro.style.display === 'block' && idEdicionActual) { limpiarFormulario(); } else { formRegistro.style.display = formRegistro.style.display === 'none' ? 'block' : 'none'; } };
 }
 
 if (btnGuardarRegistro) {
@@ -334,36 +356,39 @@ if (btnGuardarRegistro) {
         const tipo = document.getElementById('nuevo-tipo').value;
         const compania = document.getElementById('nueva-compania').value;
         const nombre = document.getElementById('nuevo-nombre').value;
-        const estado = document.getElementById('nuevo-estado').value;
         const fecha = document.getElementById('nueva-fecha').value;
         const info = document.getElementById('nueva-info').value;
         const link = document.getElementById('nuevo-link').value;
-        const foto1 = document.getElementById('foto-1').files[0];
-        const foto2 = document.getElementById('foto-2').files[0];
+        const foto1 = document.getElementById('foto-1').files[0]; const foto2 = document.getElementById('foto-2').files[0];
 
-        if (!nombre) return alert("El nombre del lugar es obligatorio.");
-
-        btnGuardarRegistro.disabled = true;
-        mensajeCarga.style.display = 'block';
+        if (!nombre) return alert("El nombre es obligatorio.");
+        btnGuardarRegistro.disabled = true; mensajeCarga.style.display = 'block';
 
         try {
             const provinciaActual = tituloInfoProvincia.innerText.trim().toUpperCase();
-            
-            let url1 = "", url2 = "";
-            let viajePrevio = null;
+            let url1 = "", url2 = ""; let viajePrevio = null;
 
             if (idEdicionActual) {
                 viajePrevio = datosViajes[provinciaActual].find(v => v.id === idEdicionActual);
-                url1 = viajePrevio.foto1 || ""; 
-                url2 = viajePrevio.foto2 || "";
+                url1 = viajePrevio.foto1 || ""; url2 = viajePrevio.foto2 || "";
             }
 
-            if (foto1) url1 = await subirFotoImgBB(foto1);
-            if (foto2) url2 = await subirFotoImgBB(foto2);
+            if (foto1) url1 = await subirFotoImgBB(foto1); if (foto2) url2 = await subirFotoImgBB(foto2);
 
-            const registroData = { 
-                provincia: provinciaActual, tipo, compania, nombre, estado, fecha, info, link, foto1: url1, foto2: url2 
-            };
+            let registroData = { provincia: provinciaActual, tipo, compania, nombre, fecha, info, link, foto1: url1, foto2: url2 };
+
+            // Inyectamos la data según el mundo elegido
+            if (tipo === 'TRABAJO') {
+                registroData.tipoProyecto = document.getElementById('nuevo-tipo-proyecto').value;
+                registroData.clima = seleccionClima;
+                registroData.comida = estrellasValor.comida;
+            } else {
+                registroData.transporte = seleccionTransporte;
+                registroData.platoDestacado = document.getElementById('nuevo-plato').value;
+                registroData.gastro = estrellasValor.gastro;
+                registroData.hosp = estrellasValor.hosp;
+                registroData.atrac = estrellasValor.atrac;
+            }
 
             if (idEdicionActual) {
                 await updateDoc(doc(db, "viajes", idEdicionActual), registroData);
@@ -376,70 +401,37 @@ if (btnGuardarRegistro) {
                 datosViajes[provinciaActual].push(registroData);
             }
             
-            const colorPanel = tituloInfoProvincia.style.webkitTextFillColor;
-            renderizarLugares(provinciaActual, colorPanel);
-            
-            if(capaProvincias) { capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); }
-            actualizarProgresoGlobal();
-
+            renderizarLugares(provinciaActual, tituloInfoProvincia.style.webkitTextFillColor);
+            if(capaProvincias) { capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); } actualizarProgresoGlobal();
             limpiarFormulario(); 
+        } catch (error) { alert("Error al guardar: " + error.message); }
 
-        } catch (error) { alert("Ocurrió un error al guardar: " + error.message); }
-
-        btnGuardarRegistro.disabled = false;
-        mensajeCarga.style.display = 'none';
+        btnGuardarRegistro.disabled = false; mensajeCarga.style.display = 'none';
     };
 }
 
 btnCerrarInfo.onclick = () => { pantallaInfo.style.display = 'none'; };
 btnVolver.onclick = () => {
-    if (capaProvincias) mapa.removeLayer(capaProvincias);
-    capaNacional.eachLayer(layer => capaNacional.resetStyle(layer));
-    capaNacional.addTo(mapa);
-    mapa.setView([-9.5, -75.01], 5.0); 
-    tituloDepartamento.style.display = 'none';
-    tituloMapa.style.display = 'block';
-    btnVolver.style.display = 'none';
-    actualizarProgresoGlobal(); 
+    if (capaProvincias) mapa.removeLayer(capaProvincias); capaNacional.eachLayer(layer => capaNacional.resetStyle(layer)); capaNacional.addTo(mapa);
+    mapa.setView([-9.5, -75.01], 5.0); tituloDepartamento.style.display = 'none'; tituloMapa.style.display = 'block'; btnVolver.style.display = 'none'; actualizarProgresoGlobal(); 
 };
 
-// CÁLCULO DE PORCENTAJE CORREGIDO
 function actualizarProgresoGlobal() {
-    if (!datosProvinciasGenerales) return;
-    const total = datosProvinciasGenerales.features.length;
-    let visitados = 0;
-
+    if (!datosProvinciasGenerales) return; let visitados = 0;
     datosProvinciasGenerales.features.forEach(p => {
         let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
-        if (datosViajes[provLimpia]) {
-            const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
-            if(filtrados.length > 0) visitados++;
-        }
+        if (datosViajes[provLimpia]) { const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo); if(filtrados.length > 0) visitados++; }
     });
-    
-    let porc = total === 0 ? 0 : Math.round((visitados / total) * 100);
-    // Truco: Si tienes al menos 1 visita, la barra no puede marcar 0%
-    if (visitados > 0 && porc === 0) porc = 1; 
-
+    let porc = Math.round((visitados / datosProvinciasGenerales.features.length) * 100); if (visitados > 0 && porc === 0) porc = 1; 
     barraRelleno.style.width = porc + '%'; textoProgreso.innerText = porc + '%'; mascotaProgreso.style.left = porc + '%';
 }
-
 function actualizarProgresoDepartamental(nombreDepLimpio) {
-    const provsDelDep = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio);
-    const total = provsDelDep.length;
-    let visitados = 0;
-
+    const provsDelDep = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio); let visitados = 0;
     provsDelDep.forEach(p => {
         let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
-        if (datosViajes[provLimpia]) {
-            const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
-            if(filtrados.length > 0) visitados++;
-        }
+        if (datosViajes[provLimpia]) { const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo); if(filtrados.length > 0) visitados++; }
     });
-    
-    let porc = total === 0 ? 0 : Math.round((visitados / total) * 100);
-    if (visitados > 0 && porc === 0) porc = 1; 
-
+    let porc = provsDelDep.length === 0 ? 0 : Math.round((visitados / provsDelDep.length) * 100); if (visitados > 0 && porc === 0) porc = 1; 
     barraRelleno.style.width = porc + '%'; textoProgreso.innerText = porc + '%'; mascotaProgreso.style.left = porc + '%';
 }
 
@@ -449,21 +441,14 @@ btnIngresar.onclick = () => {
         setTimeout(() => {
             pantallaAcceso.style.opacity = '0';
             setTimeout(() => {
-                pantallaAcceso.style.display = 'none';
-                contenedorMapa.style.display = 'block';
-                tituloMapa.style.display = 'block';
-                
-                btnMute.style.display = 'flex';
-                btnFiltro.style.display = 'flex';
-                
+                pantallaAcceso.style.display = 'none'; contenedorMapa.style.display = 'block'; tituloMapa.style.display = 'block';
+                btnMute.style.display = 'flex'; btnFiltro.style.display = 'flex'; btnDashboard.style.display = 'flex';
                 contenedorProgreso.style.display = 'block';
-                reproducirMusicaAleatoria();
-                inicializarMapa();
+                reproducirMusicaAleatoria(); inicializarMapa();
             }, 800);
         }, 600);
     } else {
-        avatarGuia.src = './assets/img/mascota-triste.webp';
-        inputPass.value = '';
+        avatarGuia.src = './assets/img/mascota-triste.webp'; inputPass.value = '';
         setTimeout(() => { if (inputPass.value.length === 0) avatarGuia.src = './assets/img/mascota-hola.webp'; }, 2000); 
     }
 };
@@ -471,13 +456,4 @@ inputPass.addEventListener('input', () => { avatarGuia.src = inputPass.value.len
 btnMute.onclick = () => { audioAmbiental.muted = !audioAmbiental.muted; btnMute.textContent = audioAmbiental.muted ? '🔇' : '🔊'; };
 
 const btnActualizar = document.getElementById('btn-actualizar-app');
-if (btnActualizar) {
-    btnActualizar.onclick = () => {
-        btnActualizar.innerText = "⏳...";
-        if ('caches' in window) {
-            caches.keys().then((names) => {
-                Promise.all(names.map(name => caches.delete(name))).then(() => { window.location.reload(true); });
-            });
-        } else { window.location.reload(true); }
-    };
-}
+if (btnActualizar) { btnActualizar.onclick = () => { btnActualizar.innerText = "⏳..."; if ('caches' in window) { caches.keys().then((names) => { Promise.all(names.map(name => caches.delete(name))).then(() => { window.location.reload(true); }); }); } else { window.location.reload(true); } }; }

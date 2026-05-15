@@ -69,25 +69,17 @@ body, html {
 @keyframes caminarMascota { 0% { bottom: 8px; } 100% { bottom: 14px; } }
 #texto-progreso { position: absolute; top: 18px; right: 0; color: #fff; font-weight: 900; text-shadow: 1px 1px 2px #000; }
 
-#pantalla-info {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-    background: rgba(10, 17, 24, 0.95); z-index: 10000; display: flex; justify-content: center; align-items: center;
-}
 .info-contenido {
     width: 90%; max-width: 600px; height: 80vh; background: #111;
     border: 3px solid transparent; border-radius: 30px; position: relative;
     padding: 30px; overflow-y: auto; text-align: center; box-shadow: 0 0 20px rgba(255,255,255,0.1); 
-}
-#btn-cerrar-info {
-    position: absolute; top: 15px; right: 15px; background: #FF1493; border: none; border-radius: 50%; 
-    width: 40px; height: 40px; color: white; font-weight: 900; cursor: pointer;
 }
 .lugar-card {
     background: rgba(255,255,255,0.05); margin: 15px 0; padding: 15px;
     border-radius: 15px; border-left: 5px solid #00FFFF; text-align: left; position: relative;
 }
 .lugar-card h3 { color: #00FA9A; margin: 0; font-size: 1rem; padding-right: 55px; }
-.lugar-card p { color: #ddd; font-size: 0.9rem; margin: 5px 0 0; }
+.lugar-card p { color: #ddd; font-size: 0.85rem; margin: 5px 0 0; }
 
 .etiqueta-provincia {
     background: transparent !important; border: none !important; box-shadow: none !important;
@@ -104,8 +96,7 @@ body, html {
     transition: fill-opacity 0.3s ease, filter 0.3s ease;
 }
 .poligono-vidrio:active {
-    fill-opacity: 0.6 !important;
-    filter: drop-shadow(0px 5px 5px rgba(0, 0, 0, 0.9)) drop-shadow(0px 0px 15px rgba(255, 255, 255, 0.8));
+    fill-opacity: 0.6 !important; filter: drop-shadow(0px 5px 5px rgba(0, 0, 0, 0.9)) drop-shadow(0px 0px 15px rgba(255, 255, 255, 0.8));
 }
 
 .input-chicha, .file-chicha {
@@ -123,14 +114,6 @@ body, html {
 .btn-chicha:active { transform: scale(0.95); }
 .file-chicha { border: 1px dashed #00FA9A; font-size: 0.7rem; color: #aaa; }
 .foto-viaje { width: 48%; border-radius: 8px; border: 2px solid #00FFFF; object-fit: cover; aspect-ratio: 1; cursor: pointer; }
-
-.filtro-flotante { position: fixed; top: 15px; left: 15px; z-index: 1001; display: none; }
-.select-chicha {
-    background: rgba(0,0,0,0.8); color: #00FFFF; border: 2px solid #FF1493;
-    padding: 8px 15px; border-radius: 20px; font-family: 'Paytone One', sans-serif;
-    outline: none; cursor: pointer; text-transform: uppercase; font-size: 0.7rem;
-    box-shadow: 0 0 10px rgba(255, 20, 147, 0.5);
-}
 
 .tag-info {
     display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.7rem;
@@ -150,14 +133,31 @@ body, html {
 /* BOTONES CRUD */
 .btn-eliminar {
     position: absolute; top: 10px; right: 10px; background: transparent; border: none;
-    font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s;
-    filter: drop-shadow(0px 0px 2px rgba(255, 0, 0, 0.5));
+    font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(255, 0, 0, 0.5));
 }
 .btn-eliminar:hover { transform: scale(1.2); opacity: 1; }
 
 .btn-editar {
     position: absolute; top: 10px; right: 40px; background: transparent; border: none;
-    font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s;
-    filter: drop-shadow(0px 0px 2px rgba(0, 255, 255, 0.5));
+    font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(0, 255, 255, 0.5));
 }
 .btn-editar:hover { transform: scale(1.2); opacity: 1; }
+
+/* NUEVO: ESTILOS PARA ESTRELLAS Y SELECTORES VISUALES */
+.botonera-opciones { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.btn-opcion {
+    background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px;
+    cursor: pointer; font-size: 1.2rem; border: 1px solid transparent; transition: all 0.2s;
+}
+.btn-opcion.seleccionado { background: rgba(255,215,0,0.3); border-color: #FFD700; box-shadow: 0 0 10px #FFD700; transform: scale(1.1); }
+
+.contenedor-estrellas { font-size: 1.5rem; color: #555; cursor: pointer; user-select: none; }
+.contenedor-estrellas span { transition: color 0.2s; }
+.contenedor-estrellas span.activa { color: #FFD700; text-shadow: 0 0 10px #FFD700; }
+
+/* DASHBOARD STATS */
+.stat-box {
+    background: rgba(255,255,255,0.05); border-left: 5px solid #FF1493;
+    padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
+}
+.stat-box span.numero { font-size: 1.8rem; font-weight: 900; color: #00FFFF; font-family: 'Paytone One', sans-serif;}

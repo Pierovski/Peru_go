@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Perú Go - Personal</title>
-    <link rel="manifest" href="manifest.json?v=2">
+    <title>Perú Go - v2.0</title>
+    <link rel="manifest" href="manifest.json?v=3">
     <meta name="theme-color" content="#0a1118">
     <link rel="apple-touch-icon" href="./assets/img/mascota-feliz.webp">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Paytone+One&display=swap" rel="stylesheet">
 </head>
 <body>
-    <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer; font-family: 'Montserrat', sans-serif;">v1.8</button>
+    <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer; font-family: 'Montserrat', sans-serif;">actualizar</button>
     
     <div id="pantalla-acceso">
         <div class="acceso-flotante">
@@ -26,9 +26,18 @@
         </div>
     </div>
 
-    <div id="pantalla-info" style="display: none;">
+    <div id="pantalla-dashboard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 10000; justify-content: center; align-items: center;">
+        <div class="info-contenido" style="border-color: #FFD700; box-shadow: 0 0 20px #FFD700;">
+            <button id="btn-cerrar-dashboard" style="position: absolute; top: 15px; right: 15px; background: #FF1493; border: none; border-radius: 50%; width: 40px; height: 40px; color: white; font-weight: 900; cursor: pointer;">✖</button>
+            <h2 class="titulo-chicha" style="color: #FFD700;">RESUMEN GLOBAL</h2>
+            <div id="contenido-dashboard" style="margin-top: 20px; text-align: left; color: white; font-family: 'Montserrat', sans-serif;">
+                </div>
+        </div>
+    </div>
+
+    <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 9999; justify-content: center; align-items: center;">
         <div class="info-contenido" id="panel-tarjeta-viajes">
-            <button id="btn-cerrar-info">✖</button>
+            <button id="btn-cerrar-info" style="position: absolute; top: 15px; right: 15px; background: #FF1493; border: none; border-radius: 50%; width: 40px; height: 40px; color: white; font-weight: 900; cursor: pointer;">✖</button>
             <h2 id="info-provincia-titulo" class="titulo-chicha">PROVINCIA</h2>
             
             <div id="info-lugares">
@@ -54,9 +63,61 @@
                 </div>
 
                 <input type="text" id="nuevo-nombre" placeholder="Lugar o Proyecto" class="input-chicha">
-                <input type="text" id="nuevo-estado" placeholder="Estado (ej. Visitado ✅)" class="input-chicha">
-                <input type="text" id="nueva-fecha" placeholder="Fecha (ej. Mayo 2026)" class="input-chicha">
-                <textarea id="nueva-info" placeholder="Detalles de la expedición..." class="input-chicha"></textarea>
+                
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <label style="color: #00FA9A; font-size: 0.8rem; font-weight: bold;">Fecha:</label>
+                    <input type="date" id="nueva-fecha" class="input-chicha" style="margin-bottom: 0;">
+                </div>
+
+                <div id="campos-trabajo" style="display: none; background: rgba(255, 69, 0, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed #FF4500;">
+                    <select id="nuevo-tipo-proyecto" class="input-chicha">
+                        <option value="Levantamiento Topográfico">Levantamiento Topográfico</option>
+                        <option value="Control de Niveles / Trazo">Control de Niveles / Trazo</option>
+                        <option value="Vuelo Fotogramétrico / Dron">Vuelo Fotogramétrico / Dron</option>
+                        <option value="Movimiento de Tierras / Drenajes">Movimiento de Tierras / Drenajes</option>
+                        <option value="Otro">Otro Proyecto</option>
+                    </select>
+                    
+                    <p style="color: #FFD700; font-size: 0.8rem; margin: 5px 0;">Clima de la jornada:</p>
+                    <div class="botonera-opciones" id="selector-clima">
+                        <div class="btn-opcion" data-valor="☀️">☀️</div>
+                        <div class="btn-opcion" data-valor="☁️">☁️</div>
+                        <div class="btn-opcion" data-valor="🌧️">🌧️</div>
+                        <div class="btn-opcion" data-valor="❄️">❄️</div>
+                    </div>
+                    
+                    <p style="color: #FFD700; font-size: 0.8rem; margin: 10px 0 5px;">Calificación Comida:</p>
+                    <div class="contenedor-estrellas" id="estrellas-comida">
+                        <span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span>
+                    </div>
+                </div>
+
+                <div id="campos-personal" style="display: block; background: rgba(0, 250, 154, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed #00FA9A;">
+                    <p style="color: #00FFFF; font-size: 0.8rem; margin: 5px 0;">Transporte principal:</p>
+                    <div class="botonera-opciones" id="selector-transporte">
+                        <div class="btn-opcion" data-valor="🚌">🚌</div>
+                        <div class="btn-opcion" data-valor="🚢">🚢</div>
+                        <div class="btn-opcion" data-valor="✈️">✈️</div>
+                        <div class="btn-opcion" data-valor="🚗">🚗</div>
+                    </div>
+
+                    <input type="text" id="nuevo-plato" placeholder="Plato o comida destacada" class="input-chicha" style="margin-top: 10px;">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                        <span style="color: #00FFFF; font-size: 0.8rem;">Gastronomía:</span>
+                        <div class="contenedor-estrellas" id="estrellas-gastro"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                        <span style="color: #00FFFF; font-size: 0.8rem;">Hospedaje:</span>
+                        <div class="contenedor-estrellas" id="estrellas-hosp"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                        <span style="color: #00FFFF; font-size: 0.8rem;">Atractivos:</span>
+                        <div class="contenedor-estrellas" id="estrellas-atrac"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
+                    </div>
+                </div>
+
+                <textarea id="nueva-info" placeholder="Detalles u observaciones de la expedición..." class="input-chicha"></textarea>
                 <input type="url" id="nuevo-link" placeholder="Enlace externo (Drone, Civil 3D, Drive...)" class="input-chicha">
                 
                 <p style="color: #00FA9A; font-size: 0.8rem; margin: 5px 0; text-align: left;">Adjuntar Fotos (Deja en blanco para conservar las actuales):</p>
@@ -79,6 +140,7 @@
     <button id="btn-volver" class="btn-flotante-volver" style="display: none;">🔙</button>
     <div id="map"></div>
     
+    <button id="btn-dashboard" class="btn-flotante" style="display: none; bottom: 235px; left: 20px; border-color: #FFD700; box-shadow: 0 0 10px #FFD700; font-size: 1.2rem;">📊</button>
     <button id="btn-filtro" class="btn-flotante" style="display: none; bottom: 180px; left: 20px; border-color: #00FFFF; box-shadow: 0 0 10px #00FFFF; font-size: 1.2rem;">🌍</button>
     <button id="btn-mute" class="btn-flotante" style="display: none;">🔊</button>
 
@@ -91,14 +153,10 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js?v=2"></script>
+    <script type="module" src="app.js?v=3"></script>
     
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
-        }
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
     </script>
 </body>
 </html>

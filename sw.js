@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perugo-cache-v3.0.0';
+const CACHE_NAME = 'perugo-cache-v4.0.0';
 const urlsToCache = [
     './',
     './index.html',
