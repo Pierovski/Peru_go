@@ -1,10 +1,10 @@
-const CACHE_NAME = 'perugo-cache-v2.1';
+const CACHE_NAME = 'perugo-cache-v3.0.0';
 const urlsToCache = [
     './',
     './index.html',
-    './style.css',
-    './app.js',
-    './manifest.json',
+    './style.css?v=2',
+    './app.js?v=2',
+    './manifest.json?v=2',
     './data/peru_departamental_simple.geojson',
     './data/peru_provincial_simple.geojson',
     './assets/img/fondo.jpg',
@@ -27,11 +27,26 @@ self.addEventListener('install', event => {
     );
 });
 
+// NUEVO: Autolimpieza defensiva de caché
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        console.log('Destruyendo caché obsoleto:', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+    );
+});
+
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Si el archivo está en caché, lo devuelve al instante. Si no, lo busca en internet.
                 return response || fetch(event.request);
             })
     );

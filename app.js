@@ -1,7 +1,6 @@
 "use strict";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-// IMPORTAMOS updateDoc para editar
 import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -57,8 +56,6 @@ let datosProvinciasGenerales = null;
 let mapa;
 let datosGeoJSON = null;
 let datosViajes = {}; 
-
-// ESTADO GLOBAL DE EDICIÓN
 let idEdicionActual = null;
 
 const coloresChichaPremium = [ "#FF1493", "#00FA9A", "#FFD700", "#00FFFF", "#FF4500", "#9400D3" ];
@@ -215,7 +212,7 @@ function abrirInformacionProvincia(nombreOriginal, colorProvincia) {
     tarjetaContenidoInfo.style.boxShadow = `0 0 20px ${colorProvincia}`;
     tituloInfoProvincia.style.webkitTextFillColor = colorProvincia; 
     
-    limpiarFormulario(); // Cerramos cualquier edición pendiente
+    limpiarFormulario(); 
     
     renderizarLugares(nombreLimpio, colorProvincia);
     pantallaInfo.style.display = 'flex';
@@ -242,7 +239,6 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
             const tagCompania = `<span class="tag-info tag-compania">${vCompania}</span>`;
             const btnEnlace = lugar.link ? `<br><a href="${lugar.link}" target="_blank" class="btn-link">🔗 Ver Documentación / Vuelo</a>` : '';
             
-            // BOTONES CRUD: EDITAR Y ELIMINAR
             const btnEditar = `<button class="btn-editar" onclick="prepararEdicion('${lugar.id}', '${nombreLimpio}')">✏️</button>`;
             const btnEliminar = `<button class="btn-eliminar" onclick="eliminarRegistro('${lugar.id}', '${nombreLimpio}')">🗑️</button>`;
 
@@ -270,12 +266,11 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
     }
 }
 
-// LÓGICA DE EDICIÓN: Rellena el formulario
 window.prepararEdicion = (idDocumento, provinciaLimpia) => {
     const viaje = datosViajes[provinciaLimpia].find(v => v.id === idDocumento);
     if(!viaje) return;
 
-    idEdicionActual = idDocumento; // Activamos el modo edición
+    idEdicionActual = idDocumento;
 
     document.getElementById('nuevo-tipo').value = viaje.tipo || 'PERSONAL';
     document.getElementById('nueva-compania').value = viaje.compania || 'Solo';
@@ -284,18 +279,15 @@ window.prepararEdicion = (idDocumento, provinciaLimpia) => {
     document.getElementById('nueva-fecha').value = viaje.fecha || '';
     document.getElementById('nueva-info').value = viaje.info || '';
     document.getElementById('nuevo-link').value = viaje.link || '';
-    // Las fotos no se rellenan por seguridad, pero el código sabe que si las dejas vacías, conserva las originales.
 
     btnGuardarRegistro.innerHTML = '🔄 Actualizar Registro';
     btnGuardarRegistro.style.background = 'linear-gradient(90deg, #FFD700, #FF4500)';
     btnCancelarEdicion.style.display = 'block';
     formRegistro.style.display = 'block';
     
-    // Hacemos scroll suave hacia el formulario
     formRegistro.scrollIntoView({ behavior: "smooth" });
 };
 
-// LÓGICA PARA LIMPIAR Y SALIR DE EDICIÓN
 function limpiarFormulario() {
     idEdicionActual = null;
     document.getElementById('nuevo-nombre').value = ''; 
@@ -312,9 +304,7 @@ function limpiarFormulario() {
     formRegistro.style.display = 'none';
 }
 
-if (btnCancelarEdicion) {
-    btnCancelarEdicion.onclick = limpiarFormulario;
-}
+if (btnCancelarEdicion) { btnCancelarEdicion.onclick = limpiarFormulario; }
 
 window.eliminarRegistro = async (idDocumento, provinciaLimpia) => {
     if (!confirm("⚠️ ¿Estás seguro de que quieres eliminar esta expedición? Esta acción no se puede deshacer.")) return;
@@ -332,7 +322,7 @@ window.eliminarRegistro = async (idDocumento, provinciaLimpia) => {
 if (btnMostrarFormulario) {
     btnMostrarFormulario.onclick = () => { 
         if(formRegistro.style.display === 'block' && idEdicionActual) {
-            limpiarFormulario(); // Si estaba editando y presiona el botón principal, cancela.
+            limpiarFormulario(); 
         } else {
             formRegistro.style.display = formRegistro.style.display === 'none' ? 'block' : 'none'; 
         }
@@ -359,17 +349,15 @@ if (btnGuardarRegistro) {
         try {
             const provinciaActual = tituloInfoProvincia.innerText.trim().toUpperCase();
             
-            // LÓGICA DE FOTOS INTELIGENTE
             let url1 = "", url2 = "";
             let viajePrevio = null;
 
             if (idEdicionActual) {
                 viajePrevio = datosViajes[provinciaActual].find(v => v.id === idEdicionActual);
-                url1 = viajePrevio.foto1 || ""; // Rescatamos las viejas
+                url1 = viajePrevio.foto1 || ""; 
                 url2 = viajePrevio.foto2 || "";
             }
 
-            // Si el usuario sube fotos nuevas, sobrescribimos. Si no, se quedan las rescatadas.
             if (foto1) url1 = await subirFotoImgBB(foto1);
             if (foto2) url2 = await subirFotoImgBB(foto2);
 
@@ -378,12 +366,10 @@ if (btnGuardarRegistro) {
             };
 
             if (idEdicionActual) {
-                // MODO ACTUALIZAR
                 await updateDoc(doc(db, "viajes", idEdicionActual), registroData);
                 const index = datosViajes[provinciaActual].findIndex(v => v.id === idEdicionActual);
                 datosViajes[provinciaActual][index] = { id: idEdicionActual, ...registroData };
             } else {
-                // MODO CREAR NUEVO
                 const docRef = await addDoc(collection(db, "viajes"), registroData);
                 registroData.id = docRef.id;
                 if (!datosViajes[provinciaActual]) datosViajes[provinciaActual] = [];
@@ -396,7 +382,7 @@ if (btnGuardarRegistro) {
             if(capaProvincias) { capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); }
             actualizarProgresoGlobal();
 
-            limpiarFormulario(); // Resetea todo
+            limpiarFormulario(); 
 
         } catch (error) { alert("Ocurrió un error al guardar: " + error.message); }
 
@@ -417,36 +403,43 @@ btnVolver.onclick = () => {
     actualizarProgresoGlobal(); 
 };
 
+// CÁLCULO DE PORCENTAJE CORREGIDO
 function actualizarProgresoGlobal() {
     if (!datosProvinciasGenerales) return;
     const total = datosProvinciasGenerales.features.length;
     let visitados = 0;
-    const filtroActual = filtroMapa ? filtroMapa.value : 'TODOS';
 
     datosProvinciasGenerales.features.forEach(p => {
         let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
         if (datosViajes[provLimpia]) {
-            const filtrados = datosViajes[provLimpia].filter(v => filtroActual === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActual);
+            const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
             if(filtrados.length > 0) visitados++;
         }
     });
-    const porc = total === 0 ? 0 : Math.round((visitados / total) * 100);
+    
+    let porc = total === 0 ? 0 : Math.round((visitados / total) * 100);
+    // Truco: Si tienes al menos 1 visita, la barra no puede marcar 0%
+    if (visitados > 0 && porc === 0) porc = 1; 
+
     barraRelleno.style.width = porc + '%'; textoProgreso.innerText = porc + '%'; mascotaProgreso.style.left = porc + '%';
 }
+
 function actualizarProgresoDepartamental(nombreDepLimpio) {
     const provsDelDep = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio);
     const total = provsDelDep.length;
     let visitados = 0;
-    const filtroActual = filtroMapa ? filtroMapa.value : 'TODOS';
 
     provsDelDep.forEach(p => {
         let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
         if (datosViajes[provLimpia]) {
-            const filtrados = datosViajes[provLimpia].filter(v => filtroActual === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActual);
+            const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
             if(filtrados.length > 0) visitados++;
         }
     });
-    const porc = total === 0 ? 0 : Math.round((visitados / total) * 100);
+    
+    let porc = total === 0 ? 0 : Math.round((visitados / total) * 100);
+    if (visitados > 0 && porc === 0) porc = 1; 
+
     barraRelleno.style.width = porc + '%'; textoProgreso.innerText = porc + '%'; mascotaProgreso.style.left = porc + '%';
 }
 

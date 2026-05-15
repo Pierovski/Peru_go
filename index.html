@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Perú Go - Personal</title>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=2">
     <meta name="theme-color" content="#0a1118">
     <link rel="apple-touch-icon" href="./assets/img/mascota-feliz.webp">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Paytone+One&display=swap" rel="stylesheet">
 </head>
 <body>
-    <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer; font-family: 'Montserrat', sans-serif;">actualizar</button>
+    <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer; font-family: 'Montserrat', sans-serif;">v1.8</button>
     
     <div id="pantalla-acceso">
         <div class="acceso-flotante">
@@ -24,14 +24,6 @@
             </div>
             <button id="btn-ingresar">Entrar</button>
         </div>
-    </div>
-
-    <div id="contenedor-filtro" class="filtro-flotante">
-        <select id="filtro-mapa" class="select-chicha">
-            <option value="TODOS">🌍 Todos los mundos</option>
-            <option value="TRABAJO">🚜 Solo Proyectos</option>
-            <option value="PERSONAL">🍹 Solo Personal</option>
-        </select>
     </div>
 
     <div id="pantalla-info" style="display: none;">
@@ -99,7 +91,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=2"></script>
     
     <script>
         if ('serviceWorker' in navigator) {
