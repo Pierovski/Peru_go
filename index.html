@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Perú Go - v2.1</title>
-    <link rel="manifest" href="manifest.json?v=4">
+    <title>Perú Go - v2.2</title>
+    <link rel="manifest" href="manifest.json?v=5">
     <meta name="theme-color" content="#0a1118">
     <link rel="apple-touch-icon" href="./assets/img/mascota-feliz.webp">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Paytone+One&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -32,15 +32,17 @@
         <p class="instruccion" style="margin-top: 15px; font-size: 0.9rem;">Sincronizando Base de Datos...</p>
     </div>
 
-    <div id="pantalla-dashboard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 10000; justify-content: center; align-items: center;">
-        <div class="info-contenido" style="border-color: #FFD700; box-shadow: 0 0 20px #FFD700;">
-            <button id="btn-cerrar-dashboard" style="position: absolute; top: 15px; right: 15px; background: #FF1493; border: none; border-radius: 50%; width: 40px; height: 40px; color: white; font-weight: 900; cursor: pointer;">✖</button>
-            <h2 class="titulo-chicha" style="color: #FFD700;">RESUMEN GLOBAL</h2>
-            <div id="contenido-dashboard" style="margin-top: 20px; text-align: left; color: white; font-family: 'Montserrat', sans-serif;"></div>
-        </div>
+    <div id="fondo-dashboard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999;"></div>
+    <div id="pantalla-dashboard" class="dashboard-bento">
+        <div class="indicador-deslizador"></div>
+        <button id="btn-cerrar-dashboard" style="position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 50%; width: 35px; height: 35px; color: white; font-weight: bold; cursor: pointer;">✖</button>
+        <h2 class="titulo-chicha" style="color: #00FFFF; text-align: center; margin-bottom: 25px; font-size: 1.5rem;">CENTRO DE MANDO</h2>
+        
+        <div class="bento-grid" id="contenido-dashboard">
+            </div>
     </div>
 
-    <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 9999; justify-content: center; align-items: center;">
+    <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 9998; justify-content: center; align-items: center;">
         <div class="info-contenido" id="panel-tarjeta-viajes">
             <button id="btn-cerrar-info" style="position: absolute; top: 15px; right: 15px; background: #FF1493; border: none; border-radius: 50%; width: 40px; height: 40px; color: white; font-weight: 900; cursor: pointer;">✖</button>
             <h2 id="info-provincia-titulo" class="titulo-chicha">PROVINCIA</h2>
@@ -51,20 +53,21 @@
             
             <div id="formulario-registro" style="display: none; margin-top: 20px; border-top: 2px dashed #FF1493; padding-top: 20px;">
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <select id="nuevo-tipo" class="input-chicha" style="width: 50%; margin-bottom: 0;">
-                        <option value="PERSONAL">🍹 Viaje Personal</option>
-                        <option value="TRABAJO">🚜 Proyecto / Obra</option>
+                    <select id="nuevo-tipo" class="input-chicha" style="width: 50%; margin-bottom: 0; font-size: 0.8rem;">
+                        <option value="PERSONAL">🍹 Personal</option>
+                        <option value="TRABAJO">🚜 Trabajo/Obra</option>
+                        <option value="FUTBOL">⚽ Fútbol/Estadio</option>
                     </select>
-                    <select id="nueva-compania" class="input-chicha" style="width: 50%; margin-bottom: 0;">
+                    <select id="nueva-compania" class="input-chicha" style="width: 50%; margin-bottom: 0; font-size: 0.8rem;">
                         <option value="Solo">👤 Solo</option>
                         <option value="Pareja">❤️ Pareja</option>
                         <option value="Familia">👨‍👩‍👧‍👦 Familia</option>
-                        <option value="Equipo Obra">👷 Equipo Obra</option>
-                        <option value="Mascota">🐕 Mascota</option>
+                        <option value="Equipo">👷 Equipo</option>
+                        <option value="Amigos">🍻 Amigos</option>
                     </select>
                 </div>
 
-                <input type="text" id="nuevo-nombre" placeholder="Lugar o Proyecto" class="input-chicha">
+                <input type="text" id="nuevo-nombre" placeholder="Lugar, Ciudad o Zona" class="input-chicha">
                 
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                     <label style="color: #00FA9A; font-size: 0.8rem; font-weight: bold;">Fecha:</label>
@@ -88,8 +91,8 @@
                         <div class="btn-opcion" data-valor="❄️">❄️</div>
                     </div>
                     
-                    <p style="color: #FFD700; font-size: 0.8rem; margin: 10px 0 5px;">Calificación Comida:</p>
-                    <div class="contenedor-estrellas" id="estrellas-comida">
+                    <p style="color: #FFD700; font-size: 0.8rem; margin: 10px 0 5px;">Calificación a la Empresa/Contratista:</p>
+                    <div class="contenedor-estrellas" id="estrellas-empresa">
                         <span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span>
                     </div>
                 </div>
@@ -119,8 +122,18 @@
                     </div>
                 </div>
 
+                <div id="campos-futbol" style="display: none; background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed #FFF;">
+                    <input type="text" id="nuevo-estadio" placeholder="Nombre del Estadio (Ej. Matute)" class="input-chicha">
+                    <input type="text" id="nuevo-partido" placeholder="Motivo / Partido (Ej. vs U)" class="input-chicha">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <span style="color: #FFF; font-size: 0.8rem; font-weight: bold;">Hinchada / Ambiente:</span>
+                        <div class="contenedor-estrellas" id="estrellas-ambiente"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
+                    </div>
+                </div>
+
                 <textarea id="nueva-info" placeholder="Detalles u observaciones de la expedición..." class="input-chicha"></textarea>
-                <input type="url" id="nuevo-link" placeholder="Enlace externo (Drone, Civil 3D, Drive...)" class="input-chicha">
+                <input type="url" id="nuevo-link" placeholder="Enlace externo (Drone, Civil 3D, Video...)" class="input-chicha">
                 
                 <p style="color: #00FA9A; font-size: 0.8rem; margin: 5px 0; text-align: left;">Adjuntar Fotos (Deja en blanco para conservar las actuales):</p>
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -155,8 +168,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js?v=4"></script>
-    
+    <script type="module" src="app.js?v=5"></script>
     <script>
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
     </script>

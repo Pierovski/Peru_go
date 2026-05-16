@@ -14,11 +14,9 @@ body, html {
 #avatar-guia { width: 150px; margin-bottom: 20px; animation: flotar 3s ease-in-out infinite; }
 @keyframes flotar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-/* SPINNER PARA PANTALLA DE CARGA */
 .spinner-chicha {
     width: 40px; height: 40px; border: 4px solid rgba(255, 20, 147, 0.3);
-    border-top: 4px solid #00FFFF; border-radius: 50%;
-    animation: girar 1s linear infinite;
+    border-top: 4px solid #00FFFF; border-radius: 50%; animation: girar 1s linear infinite;
 }
 @keyframes girar { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -65,8 +63,7 @@ body, html {
 .btn-flotante-volver { bottom: 125px; right: 20px; left: auto; width: 40px; height: 40px; border: 2px solid #00FA9A; font-size: 1.2rem; }
 
 #contenedor-progreso {
-    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-    width: 80%; max-width: 500px; z-index: 1000; display: none;
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 500px; z-index: 1000; display: none;
 }
 #barra-fondo { width: 100%; height: 12px; background: rgba(0, 0, 0, 0.7); border-radius: 10px; border: 1.5px solid #f1c40f; overflow: hidden; }
 #barra-relleno { height: 100%; width: 0%; background: linear-gradient(90deg, #FF1493, #00FA9A, #FFD700); transition: width 0.5s ease; }
@@ -83,25 +80,34 @@ body, html {
     padding: 30px; overflow-y: auto; text-align: center; box-shadow: 0 0 20px rgba(255,255,255,0.1); 
 }
 
-/* --- NUEVO: SISTEMA DE TARJETAS ACORDEÓN --- */
+.dashboard-bento {
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 75vh;
+    background: rgba(15, 20, 25, 0.98); border-radius: 30px 30px 0 0;
+    box-shadow: 0 -5px 25px rgba(0,0,0,0.8); z-index: 10000;
+    transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    padding: 20px 20px 50px; box-sizing: border-box; overflow-y: auto; border-top: 1px solid rgba(255,215,0,0.3);
+}
+.dashboard-bento.activo { transform: translateY(0); }
+.indicador-deslizador { width: 50px; height: 5px; background: rgba(255,255,255,0.3); border-radius: 10px; margin: 0 auto 20px; }
+.bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
+.bento-item {
+    background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+    border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+}
+.bento-full { grid-column: span 2; }
+.bento-valor { font-family: 'Paytone One', sans-serif; font-size: 2rem; color: #FFF; margin: 10px 0; }
+.bento-titulo { font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+
 .lugar-card {
     background: rgba(255,255,255,0.05); margin: 15px 0; padding: 0 15px;
-    border-radius: 15px; border-left: 5px solid #00FFFF; text-align: left; position: relative;
-    overflow: hidden;
+    border-radius: 15px; border-left: 5px solid #00FFFF; text-align: left; position: relative; overflow: hidden;
 }
-.tarjeta-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 15px 0; cursor: pointer; border-bottom: 1px dashed transparent;
-    transition: border-color 0.3s;
-}
-.tarjeta-body {
-    display: none; padding-bottom: 15px; transition: all 0.3s ease;
-}
+.tarjeta-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color 0.3s; }
+.tarjeta-body { display: none; padding-bottom: 15px; transition: all 0.3s ease; }
 .tarjeta-body.abierto { display: block; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px; }
-
 .flecha-acordeon { font-size: 1rem; color: #00FFFF; transition: transform 0.3s; }
 .flecha-acordeon.rotada { transform: rotate(180deg); }
-
 .lugar-card h3 { color: #00FA9A; margin: 0; font-size: 1rem; width: 85%; }
 .lugar-card p { color: #ddd; font-size: 0.85rem; margin: 5px 0 0; }
 
@@ -112,82 +118,47 @@ body, html {
     text-transform: uppercase; padding: 0; white-space: normal !important; text-align: center;
     width: max-content; max-width: fit-content; line-height: 1.1;
 }
-.leaflet-tooltip-left::before, .leaflet-tooltip-right::before, 
-.leaflet-tooltip-top::before, .leaflet-tooltip-bottom::before { display: none !important; }
+.leaflet-tooltip-left::before, .leaflet-tooltip-right::before, .leaflet-tooltip-top::before, .leaflet-tooltip-bottom::before { display: none !important; }
 
 .poligono-vidrio {
-    filter: drop-shadow(0px 10px 15px rgba(0, 0, 0, 0.9)) drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.4));
-    transition: fill-opacity 0.3s ease, filter 0.3s ease;
+    filter: drop-shadow(0px 10px 15px rgba(0, 0, 0, 0.9)) drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.4)); transition: fill-opacity 0.3s ease, filter 0.3s ease;
 }
-.poligono-vidrio:active {
-    fill-opacity: 0.6 !important; filter: drop-shadow(0px 5px 5px rgba(0, 0, 0, 0.9)) drop-shadow(0px 0px 15px rgba(255, 255, 255, 0.8));
-}
+.poligono-vidrio:active { fill-opacity: 0.6 !important; filter: drop-shadow(0px 5px 5px rgba(0, 0, 0, 0.9)) drop-shadow(0px 0px 15px rgba(255, 255, 255, 0.8)); }
 
 .input-chicha, .file-chicha {
     width: 100%; box-sizing: border-box; margin-bottom: 10px; background: rgba(0,0,0,0.5); color: white; 
-    border: 1px solid #FF1493; padding: 10px; border-radius: 8px; font-family: 'Montserrat', sans-serif;
-    outline: none; transition: border 0.3s;
+    border: 1px solid #FF1493; padding: 10px; border-radius: 8px; font-family: 'Montserrat', sans-serif; outline: none; transition: border 0.3s;
 }
 .input-chicha:focus { border-color: #00FFFF; }
-
 .btn-chicha {
     width: 100%; padding: 12px; border-radius: 8px; border: none; font-family: 'Paytone One', sans-serif; 
-    cursor: pointer; background: linear-gradient(90deg, #FF1493, #FFD700); color: black; 
-    text-transform: uppercase; font-size: 0.9rem; transition: transform 0.2s;
+    cursor: pointer; background: linear-gradient(90deg, #FF1493, #FFD700); color: black; text-transform: uppercase; font-size: 0.9rem; transition: transform 0.2s;
 }
 .btn-chicha:active { transform: scale(0.95); }
 .file-chicha { border: 1px dashed #00FA9A; font-size: 0.7rem; color: #aaa; }
 
-/* NUEVO: ESTILO PARA LAZY LOADING DE FOTOS */
-.foto-viaje { 
-    width: 48%; border-radius: 8px; border: 2px solid #00FFFF; 
-    object-fit: cover; aspect-ratio: 1; cursor: pointer;
-}
-.lazy-foto {
-    opacity: 0; transition: opacity 0.5s ease-in-out; background: #222;
-}
+.foto-viaje { width: 48%; border-radius: 8px; border: 2px solid #00FFFF; object-fit: cover; aspect-ratio: 1; cursor: pointer; }
+.lazy-foto { opacity: 0; transition: opacity 0.5s ease-in-out; background: #222; }
 
-.tag-info {
-    display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.7rem;
-    margin-right: 5px; margin-top: 5px; font-weight: bold; text-transform: uppercase;
-}
+.tag-info { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.7rem; margin-right: 5px; margin-top: 5px; font-weight: bold; text-transform: uppercase; }
 .tag-trabajo { background: rgba(255, 69, 0, 0.2); color: #FF4500; border: 1px solid #FF4500; }
 .tag-personal { background: rgba(0, 250, 154, 0.2); color: #00FA9A; border: 1px solid #00FA9A; }
+.tag-futbol { background: rgba(255, 255, 255, 0.2); color: #FFF; border: 1px solid #FFF; }
 .tag-compania { background: rgba(0, 255, 255, 0.2); color: #00FFFF; border: 1px solid #00FFFF; }
 
-.btn-link {
-    display: inline-block; margin-top: 10px; padding: 8px 12px; background: rgba(255, 215, 0, 0.1);
-    color: #FFD700; border: 1px solid #FFD700; border-radius: 5px; text-decoration: none;
-    font-size: 0.8rem; font-family: 'Montserrat', sans-serif; transition: background 0.3s;
-}
-.btn-link:hover { background: rgba(255, 215, 0, 0.3); }
+.btn-link { display: inline-block; margin-top: 10px; padding: 8px 12px; background: rgba(255, 215, 0, 0.1); color: #FFD700; border: 1px solid #FFD700; border-radius: 5px; text-decoration: none; font-size: 0.8rem; font-family: 'Montserrat', sans-serif; transition: background 0.3s; }
 
-/* LOS BOTONES CRUD AHORA ESTÁN DENTRO DEL BODY DE LA TARJETA */
-.btn-eliminar {
-    position: absolute; bottom: 15px; right: 15px; background: transparent; border: none;
-    font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(255, 0, 0, 0.5));
-}
-.btn-eliminar:hover { transform: scale(1.2); opacity: 1; }
-
-.btn-editar {
-    position: absolute; bottom: 15px; right: 55px; background: transparent; border: none;
-    font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(0, 255, 255, 0.5));
-}
-.btn-editar:hover { transform: scale(1.2); opacity: 1; }
+.btn-eliminar { position: absolute; bottom: 15px; right: 15px; background: transparent; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(255, 0, 0, 0.5)); }
+.btn-editar { position: absolute; bottom: 15px; right: 55px; background: transparent; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(0, 255, 255, 0.5)); }
+/* NUEVO: Botón para reporte fotográfico */
+.btn-compartir { position: absolute; bottom: 15px; right: 95px; background: transparent; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s; filter: drop-shadow(0px 0px 2px rgba(255, 215, 0, 0.5)); }
+.btn-eliminar:hover, .btn-editar:hover, .btn-compartir:hover { transform: scale(1.2); opacity: 1; }
 
 .botonera-opciones { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-.btn-opcion {
-    background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px;
-    cursor: pointer; font-size: 1.2rem; border: 1px solid transparent; transition: all 0.2s;
-}
+.btn-opcion { background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; border: 1px solid transparent; transition: all 0.2s; }
 .btn-opcion.seleccionado { background: rgba(255,215,0,0.3); border-color: #FFD700; box-shadow: 0 0 10px #FFD700; transform: scale(1.1); }
 
 .contenedor-estrellas { font-size: 1.5rem; color: #555; cursor: pointer; user-select: none; }
 .contenedor-estrellas span { transition: color 0.2s; }
 .contenedor-estrellas span.activa { color: #FFD700; text-shadow: 0 0 10px #FFD700; }
-
-.stat-box {
-    background: rgba(255,255,255,0.05); border-left: 5px solid #FF1493;
-    padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
-}
-.stat-box span.numero { font-size: 1.8rem; font-weight: 900; color: #00FFFF; font-family: 'Paytone One', sans-serif;}
+ 

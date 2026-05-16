@@ -23,10 +23,10 @@ const tituloInfoProvincia = document.getElementById('info-provincia-titulo');
 const contenedorLugares = document.getElementById('info-lugares');
 const btnCerrarInfo = document.getElementById('btn-cerrar-info');
 
-// NUEVO: Pantalla de Carga
 const pantallaCarga = document.getElementById('pantalla-carga');
 
 const pantallaDashboard = document.getElementById('pantalla-dashboard');
+const fondoDashboard = document.getElementById('fondo-dashboard');
 const btnCerrarDashboard = document.getElementById('btn-cerrar-dashboard');
 const contenidoDashboard = document.getElementById('contenido-dashboard');
 
@@ -53,18 +53,21 @@ const mensajeCarga = document.getElementById('mensaje-carga');
 const selectTipo = document.getElementById('nuevo-tipo');
 const camposTrabajo = document.getElementById('campos-trabajo');
 const camposPersonal = document.getElementById('campos-personal');
+const camposFutbol = document.getElementById('campos-futbol');
 
 selectTipo.addEventListener('change', () => {
-    if (selectTipo.value === 'TRABAJO') {
-        camposTrabajo.style.display = 'block'; camposPersonal.style.display = 'none';
-    } else {
-        camposTrabajo.style.display = 'none'; camposPersonal.style.display = 'block';
-    }
+    camposTrabajo.style.display = 'none';
+    camposPersonal.style.display = 'none';
+    camposFutbol.style.display = 'none';
+
+    if (selectTipo.value === 'TRABAJO') camposTrabajo.style.display = 'block';
+    else if (selectTipo.value === 'FUTBOL') camposFutbol.style.display = 'block';
+    else camposPersonal.style.display = 'block';
 });
 
 let idEdicionActual = null;
 let seleccionClima = ''; let seleccionTransporte = '';
-let estrellasValor = { comida: 0, gastro: 0, hosp: 0, atrac: 0 };
+let estrellasValor = { empresa: 0, gastro: 0, hosp: 0, atrac: 0, ambiente: 0 };
 
 document.querySelectorAll('#selector-clima .btn-opcion').forEach(btn => {
     btn.onclick = () => { document.querySelectorAll('#selector-clima .btn-opcion').forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); seleccionClima = btn.dataset.valor; };
@@ -75,6 +78,7 @@ document.querySelectorAll('#selector-transporte .btn-opcion').forEach(btn => {
 
 function inicializarEstrellas(contenedorId, claveValor) {
     const contenedor = document.getElementById(contenedorId);
+    if(!contenedor) return;
     const estrellas = contenedor.querySelectorAll('span');
     estrellas.forEach((estrella, idx) => {
         estrella.onclick = () => {
@@ -83,17 +87,26 @@ function inicializarEstrellas(contenedorId, claveValor) {
         };
     });
 }
-inicializarEstrellas('estrellas-comida', 'comida'); inicializarEstrellas('estrellas-gastro', 'gastro');
-inicializarEstrellas('estrellas-hosp', 'hosp'); inicializarEstrellas('estrellas-atrac', 'atrac');
+inicializarEstrellas('estrellas-empresa', 'empresa'); 
+inicializarEstrellas('estrellas-gastro', 'gastro');
+inicializarEstrellas('estrellas-hosp', 'hosp'); 
+inicializarEstrellas('estrellas-atrac', 'atrac');
+inicializarEstrellas('estrellas-ambiente', 'ambiente');
 
 function resetUIFormulario() {
     document.querySelectorAll('.btn-opcion').forEach(b => b.classList.remove('seleccionado'));
     document.querySelectorAll('.contenedor-estrellas span').forEach(s => s.classList.remove('activa'));
-    seleccionClima = ''; seleccionTransporte = ''; estrellasValor = { comida: 0, gastro: 0, hosp: 0, atrac: 0 };
+    seleccionClima = ''; seleccionTransporte = ''; estrellasValor = { empresa: 0, gastro: 0, hosp: 0, atrac: 0, ambiente: 0 };
 }
 
 let filtroActualMundo = 'TODOS'; let indiceFiltro = 0;
-const estadosFiltro = [ { valor: 'TODOS', icono: '🌍', color: '#00FFFF' }, { valor: 'TRABAJO', icono: '🚜', color: '#FF4500' }, { valor: 'PERSONAL', icono: '🍹', color: '#00FA9A' } ];
+// NUEVO: TERCER MUNDO FUTBOLERO AÑADIDO
+const estadosFiltro = [ 
+    { valor: 'TODOS', icono: '🌍', color: '#00FFFF' }, 
+    { valor: 'TRABAJO', icono: '🚜', color: '#FF4500' }, 
+    { valor: 'PERSONAL', icono: '🍹', color: '#00FA9A' },
+    { valor: 'FUTBOL', icono: '⚽', color: '#FFF' }
+];
 
 let capaNacional; let capaProvincias; let mapa; let datosGeoJSON = null;
 let datosProvinciasGenerales = null; let datosViajes = {}; 
@@ -126,7 +139,6 @@ function inicializarMapa() {
         datosViajes = viajesFirebase; datosProvinciasGenerales = provs; datosGeoJSON = deps; 
         dibujarMapaNacional(); actualizarProgresoGlobal(); 
         
-        // APAGA LA PANTALLA DE CARGA CUANDO EL MAPA ESTÁ LISTO
         pantallaCarga.style.display = 'none';
         btnMute.style.display = 'flex'; btnFiltro.style.display = 'flex'; btnDashboard.style.display = 'flex';
     });
@@ -187,34 +199,67 @@ if (btnFiltro) {
     };
 }
 
+// DASHBOARD BENTO SLIDER
 btnDashboard.onclick = () => {
-    let totProyectos = 0; let totPersonales = 0; let platosDestacados = []; let provVisitadas = new Set();
+    let totProyectos = 0; let totPersonales = 0; let platosDestacados = 0; let provVisitadas = new Set();
+    let estadios = [];
+    
     Object.keys(datosViajes).forEach(prov => {
         datosViajes[prov].forEach(viaje => {
             provVisitadas.add(prov);
-            if (viaje.tipo === 'TRABAJO') totProyectos++; else totPersonales++;
-            if (viaje.platoDestacado) platosDestacados.push(viaje.platoDestacado);
+            if (viaje.tipo === 'TRABAJO') totProyectos++; 
+            else if (viaje.tipo === 'FUTBOL') {
+                if(viaje.estadio) estadios.push(viaje.estadio);
+            }
+            else totPersonales++;
+            
+            if (viaje.platoDestacado) platosDestacados++;
         });
     });
+
     const totProvinciasPais = datosProvinciasGenerales ? datosProvinciasGenerales.features.length : 196;
     const porcExplorado = Math.round((provVisitadas.size / totProvinciasPais) * 100) || 0;
 
     contenidoDashboard.innerHTML = `
-        <div class="stat-box"><div>Tus Proyectos Activos/Obra:</div> <span class="numero">${totProyectos}</span></div>
-        <div class="stat-box"><div>Salidas Personales Registradas:</div> <span class="numero">${totPersonales}</span></div>
-        <div class="stat-box"><div>Provincias Exploradas:</div> <span class="numero">${provVisitadas.size} <span style="font-size:0.8rem; color:#fff;">(${porcExplorado}%)</span></span></div>
-        <div class="stat-box" style="border-left-color: #00FA9A;"><div>Platos Regionales Probados:</div> <span class="numero">${platosDestacados.length}</span></div>
+        <div class="bento-item bento-full" style="border-color: #00FFFF;">
+            <div class="bento-titulo">Avance Nacional</div>
+            <div class="bento-valor" style="font-size: 3rem; color: #00FFFF;">${porcExplorado}%</div>
+            <div style="font-size: 0.8rem; color: #ddd;">Has conquistado ${provVisitadas.size} provincias de 196</div>
+        </div>
+        
+        <div class="bento-item" style="border-color: #FF4500; border-left: 4px solid #FF4500;">
+            <div class="bento-titulo">Proyectos/Obra</div>
+            <div class="bento-valor" style="color: #FF4500;">${totProyectos} 🚜</div>
+        </div>
+        
+        <div class="bento-item" style="border-color: #00FA9A; border-left: 4px solid #00FA9A;">
+            <div class="bento-titulo">V. Personales</div>
+            <div class="bento-valor" style="color: #00FA9A;">${totPersonales} 🍹</div>
+        </div>
+
+        <div class="bento-item bento-full" style="border-color: #FFF; background: rgba(255,255,255,0.1);">
+            <div class="bento-titulo">Salón de la Fama - Estadios</div>
+            <div class="bento-valor" style="color: #FFF;">${estadios.length} ⚽</div>
+            <div style="font-size: 0.8rem; color: #ddd;">${estadios.length > 0 ? estadios.join(', ') : 'Aún no has registrado canchas.'}</div>
+        </div>
     `;
-    pantallaDashboard.style.display = 'flex';
+    fondoDashboard.style.display = 'block';
+    pantallaDashboard.style.display = 'block';
+    setTimeout(() => { pantallaDashboard.classList.add('activo'); }, 10);
 };
-btnCerrarDashboard.onclick = () => { pantallaDashboard.style.display = 'none'; };
+
+function cerrarDashboard() {
+    pantallaDashboard.classList.remove('activo');
+    setTimeout(() => { pantallaDashboard.style.display = 'none'; fondoDashboard.style.display = 'none'; }, 400);
+}
+btnCerrarDashboard.onclick = cerrarDashboard;
+fondoDashboard.onclick = cerrarDashboard;
 
 async function subirFotoImgBB(file) {
     const fd = new FormData(); fd.append('image', file);
     try { const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const data = await res.json(); return data.data.url; } catch (e) { throw new Error("Error imagen"); }
 }
 
-// NUEVA FUNCIÓN: Acordeón y Lazy Loading
 window.toggleAcordeon = (id) => {
     const body = document.getElementById('body-' + id);
     const flecha = document.getElementById('flecha-' + id);
@@ -222,13 +267,8 @@ window.toggleAcordeon = (id) => {
         body.classList.remove('abierto'); flecha.classList.remove('rotada');
     } else {
         body.classList.add('abierto'); flecha.classList.add('rotada');
-        // Lazy Loading: Solo descarga la foto si tocas la tarjeta
         const fotos = body.querySelectorAll('.lazy-foto');
-        fotos.forEach(img => {
-            if (!img.src || img.src === window.location.href || img.src.includes('undefined')) {
-                img.src = img.getAttribute('data-src'); img.style.opacity = '1';
-            }
-        });
+        fotos.forEach(img => { if (!img.src || img.src === window.location.href || img.src.includes('undefined')) { img.src = img.getAttribute('data-src'); img.style.opacity = '1'; } });
     }
 };
 
@@ -248,16 +288,20 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
             let htmlFotos = '';
             if (lugar.foto1 || lugar.foto2) {
                 htmlFotos = `<div style="display: flex; gap: 4%; margin-top: 15px;">`;
-                // LAS FOTOS NACEN VACÍAS GRACIAS AL LAZY-FOTO
                 if(lugar.foto1) htmlFotos += `<img data-src="${lugar.foto1}" src="" class="foto-viaje lazy-foto" onclick="window.open('${lugar.foto1}')">`;
                 if(lugar.foto2) htmlFotos += `<img data-src="${lugar.foto2}" src="" class="foto-viaje lazy-foto" onclick="window.open('${lugar.foto2}')">`;
                 htmlFotos += `</div>`;
             }
 
             const vTipo = lugar.tipo || 'PERSONAL'; const vCompania = lugar.compania || 'Solo';
-            const tagTipo = vTipo === 'TRABAJO' ? '<span class="tag-info tag-trabajo">🚜 Trabajo</span>' : '<span class="tag-info tag-personal">🍹 Personal</span>';
+            
+            let tagTipo = '';
+            if(vTipo === 'TRABAJO') tagTipo = '<span class="tag-info tag-trabajo">🚜 Trabajo</span>';
+            else if (vTipo === 'FUTBOL') tagTipo = '<span class="tag-info tag-futbol">⚽ Fútbol</span>';
+            else tagTipo = '<span class="tag-info tag-personal">🍹 Personal</span>';
+
             const tagCompania = `<span class="tag-info tag-compania">${vCompania}</span>`;
-            const btnEnlace = lugar.link ? `<br><a href="${lugar.link}" target="_blank" class="btn-link">🔗 Vuelo / Docs</a>` : '';
+            const btnEnlace = lugar.link ? `<br><a href="${lugar.link}" target="_blank" class="btn-link">🔗 Docs/Media</a>` : '';
             
             const btnEditar = `<button class="btn-editar" onclick="event.stopPropagation(); prepararEdicion('${lugar.id}', '${nombreLimpio}')">✏️</button>`;
             const btnEliminar = `<button class="btn-eliminar" onclick="event.stopPropagation(); eliminarRegistro('${lugar.id}', '${nombreLimpio}')">🗑️</button>`;
@@ -268,8 +312,13 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
             if (vTipo === 'TRABAJO') {
                 const climaIcon = lugar.clima ? `<span style="font-size:1.2rem;">${lugar.clima}</span>` : '';
                 const proy = lugar.tipoProyecto ? `<strong>Proyecto:</strong> ${lugar.tipoProyecto}<br>` : '';
-                const com = lugar.comida ? `<strong>Comida:</strong> <span style="color:#FFD700;">${genStars(lugar.comida)}</span><br>` : '';
-                detallesEspecificos = `<p style="font-size:0.85rem;">${proy}${com} ${climaIcon}</p>`;
+                const emp = lugar.empresa ? `<strong>Contratista/Empresa:</strong> <span style="color:#FFD700;">${genStars(lugar.empresa)}</span><br>` : '';
+                detallesEspecificos = `<p style="font-size:0.85rem;">${proy}${emp} ${climaIcon}</p>`;
+            } else if (vTipo === 'FUTBOL') {
+                const est = lugar.estadio ? `<strong>Estadio:</strong> ${lugar.estadio}<br>` : '';
+                const par = lugar.partido ? `<strong>Partido:</strong> ${lugar.partido}<br>` : '';
+                const amb = lugar.ambiente ? `<strong>Ambiente/Hinchada:</strong> <span style="color:#FFD700;">${genStars(lugar.ambiente)}</span>` : '';
+                detallesEspecificos = `<p style="font-size:0.85rem;">${est}${par}${amb}</p>`;
             } else {
                 const transIcon = lugar.transporte ? `<span style="font-size:1.2rem;">${lugar.transporte}</span>` : '';
                 const plato = lugar.platoDestacado ? `<strong>Plato:</strong> ${lugar.platoDestacado}<br>` : '';
@@ -279,7 +328,6 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
                 detallesEspecificos = `<p style="font-size:0.85rem;">${plato}${gas}${hos}${atr} <br>${transIcon}</p>`;
             }
 
-            // ESTRUCTURA DE ACORDEÓN
             contenedorLugares.innerHTML += `
                 <div class="lugar-card" style="border-left-color: ${colorProvincia}">
                     <div class="tarjeta-header" onclick="toggleAcordeon('${lugar.id}')">
@@ -321,7 +369,11 @@ window.prepararEdicion = (idDocumento, provinciaLimpia) => {
     if(viaje.tipo === 'TRABAJO') {
         if(viaje.tipoProyecto) document.getElementById('nuevo-tipo-proyecto').value = viaje.tipoProyecto;
         if(viaje.clima) document.querySelector(`#selector-clima .btn-opcion[data-valor="${viaje.clima}"]`)?.click();
-        if(viaje.comida) document.querySelectorAll('#estrellas-comida span')[viaje.comida-1]?.click();
+        if(viaje.empresa) document.querySelectorAll('#estrellas-empresa span')[viaje.empresa-1]?.click();
+    } else if(viaje.tipo === 'FUTBOL') {
+        if(viaje.estadio) document.getElementById('nuevo-estadio').value = viaje.estadio;
+        if(viaje.partido) document.getElementById('nuevo-partido').value = viaje.partido;
+        if(viaje.ambiente) document.querySelectorAll('#estrellas-ambiente span')[viaje.ambiente-1]?.click();
     } else {
         if(viaje.platoDestacado) document.getElementById('nuevo-plato').value = viaje.platoDestacado;
         if(viaje.transporte) document.querySelector(`#selector-transporte .btn-opcion[data-valor="${viaje.transporte}"]`)?.click();
@@ -338,7 +390,9 @@ function limpiarFormulario() {
     idEdicionActual = null; resetUIFormulario();
     document.getElementById('nuevo-nombre').value = ''; document.getElementById('nueva-fecha').value = ''; 
     document.getElementById('nueva-info').value = ''; document.getElementById('nuevo-link').value = '';
-    document.getElementById('nuevo-plato').value = ''; document.getElementById('foto-1').value = ''; document.getElementById('foto-2').value = '';
+    document.getElementById('nuevo-plato').value = ''; 
+    document.getElementById('nuevo-estadio').value = ''; document.getElementById('nuevo-partido').value = ''; 
+    document.getElementById('foto-1').value = ''; document.getElementById('foto-2').value = '';
     selectTipo.value = 'PERSONAL'; selectTipo.dispatchEvent(new Event('change'));
     
     btnGuardarRegistro.innerHTML = '💾 Guardar en la Nube'; btnGuardarRegistro.style.background = 'linear-gradient(90deg, #00FFFF, #00FA9A)';
@@ -387,7 +441,11 @@ if (btnGuardarRegistro) {
 
             if (tipo === 'TRABAJO') {
                 registroData.tipoProyecto = document.getElementById('nuevo-tipo-proyecto').value;
-                registroData.clima = seleccionClima; registroData.comida = estrellasValor.comida;
+                registroData.clima = seleccionClima; registroData.empresa = estrellasValor.empresa;
+            } else if (tipo === 'FUTBOL') {
+                registroData.estadio = document.getElementById('nuevo-estadio').value;
+                registroData.partido = document.getElementById('nuevo-partido').value;
+                registroData.ambiente = estrellasValor.ambiente;
             } else {
                 registroData.transporte = seleccionTransporte; registroData.platoDestacado = document.getElementById('nuevo-plato').value;
                 registroData.gastro = estrellasValor.gastro; registroData.hosp = estrellasValor.hosp; registroData.atrac = estrellasValor.atrac;
@@ -444,9 +502,7 @@ btnIngresar.onclick = () => {
         setTimeout(() => {
             pantallaAcceso.style.opacity = '0';
             setTimeout(() => {
-                pantallaAcceso.style.display = 'none'; 
-                // ENCIENDE LA PANTALLA DE CARGA
-                pantallaCarga.style.display = 'flex';
+                pantallaAcceso.style.display = 'none'; pantallaCarga.style.display = 'flex';
                 contenedorMapa.style.display = 'block'; tituloMapa.style.display = 'block';
                 contenedorProgreso.style.display = 'block';
                 reproducirMusicaAleatoria(); inicializarMapa();
