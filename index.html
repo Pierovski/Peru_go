@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Perú Go - v2.2</title>
-    <link rel="manifest" href="manifest.json?v=5">
+    <title>Perú Go - v2.4</title>
+    <link rel="manifest" href="manifest.json?v=7">
     <meta name="theme-color" content="#0a1118">
-    <link rel="apple-touch-icon" href="./assets/img/mascota-feliz.webp">
+    <link rel="apple-touch-icon" href="./icono-192.png">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=7">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Paytone+One&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer; font-family: 'Montserrat', sans-serif;">actualizar</button>
@@ -37,9 +38,7 @@
         <div class="indicador-deslizador"></div>
         <button id="btn-cerrar-dashboard" style="position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 50%; width: 35px; height: 35px; color: white; font-weight: bold; cursor: pointer;">✖</button>
         <h2 class="titulo-chicha" style="color: #00FFFF; text-align: center; margin-bottom: 25px; font-size: 1.5rem;">CENTRO DE MANDO</h2>
-        
-        <div class="bento-grid" id="contenido-dashboard">
-            </div>
+        <div class="bento-grid" id="contenido-dashboard"></div>
     </div>
 
     <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 9998; justify-content: center; align-items: center;">
@@ -105,9 +104,7 @@
                         <div class="btn-opcion" data-valor="✈️">✈️</div>
                         <div class="btn-opcion" data-valor="🚗">🚗</div>
                     </div>
-
                     <input type="text" id="nuevo-plato" placeholder="Plato o comida destacada" class="input-chicha" style="margin-top: 10px;">
-                    
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
                         <span style="color: #00FFFF; font-size: 0.8rem;">Gastronomía:</span>
                         <div class="contenedor-estrellas" id="estrellas-gastro"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
@@ -125,7 +122,6 @@
                 <div id="campos-futbol" style="display: none; background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed #FFF;">
                     <input type="text" id="nuevo-estadio" placeholder="Nombre del Estadio (Ej. Matute)" class="input-chicha">
                     <input type="text" id="nuevo-partido" placeholder="Motivo / Partido (Ej. vs U)" class="input-chicha">
-                    
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                         <span style="color: #FFF; font-size: 0.8rem; font-weight: bold;">Hinchada / Ambiente:</span>
                         <div class="contenedor-estrellas" id="estrellas-ambiente"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
@@ -143,7 +139,6 @@
                 
                 <button id="btn-guardar-registro" class="btn-chicha" style="background: linear-gradient(90deg, #00FFFF, #00FA9A);">💾 Guardar en la Nube</button>
                 <button id="btn-cancelar-edicion" class="btn-chicha" style="display: none; background: #FF4500; margin-top: 10px; color: white;">❌ Cancelar Edición</button>
-                
                 <p id="mensaje-carga" style="color: #FFD700; font-weight: bold; display: none; margin-top: 10px;">Procesando en la nube, no cierres... ⏳</p>
             </div>
         </div>
@@ -160,17 +155,13 @@
     <button id="btn-mute" class="btn-flotante" style="display: none;">🔊</button>
 
     <div id="contenedor-progreso">
-        <div id="barra-fondo">
-            <div id="barra-relleno"></div>
-        </div>
+        <div id="barra-fondo"><div id="barra-relleno"></div></div>
         <img src="./assets/img/mascota-explora.webp" id="mascota-progreso" alt="Explorador">
         <span id="texto-progreso">0%</span>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js?v=5"></script>
-    <script>
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
-    </script>
+    <script type="module" src="app.js?v=6"></script>
+    <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }</script>
 </body>
 </html>
