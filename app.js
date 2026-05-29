@@ -2,6 +2,8 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// NUEVO: Importaciones de Firebase Auth
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCx_mw5M7SrUt4hPrF5tOJdb0W6KdKLpLY",
@@ -11,8 +13,10 @@ const firebaseConfig = {
   messagingSenderId: "433194088191",
   appId: "1:433194088191:web:978608a957b7c800687eca"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app); // NUEVO: Inicializamos la Autenticación
 const IMGBB_API_KEY = "055cde6238b2cefe13e31dc43f2b2570";
 
 const tituloDepartamento = document.getElementById('titulo-departamento');
@@ -31,7 +35,9 @@ const btnCerrarDashboard = document.getElementById('btn-cerrar-dashboard');
 const contenidoDashboard = document.getElementById('contenido-dashboard');
 
 const btnIngresar = document.getElementById('btn-ingresar');
+const inputEmail = document.getElementById('email'); // NUEVO: DOM Correo
 const inputPass = document.getElementById('pass');
+const btnCerrarSesion = document.getElementById('btn-cerrar-sesion'); // NUEVO: Botón Cerrar Sesión
 const pantallaAcceso = document.getElementById('pantalla-acceso');
 const contenedorMapa = document.getElementById('map');
 const btnMute = document.getElementById('btn-mute');
@@ -100,7 +106,6 @@ function resetUIFormulario() {
 }
 
 let filtroActualMundo = 'TODOS'; let indiceFiltro = 0;
-// NUEVO: TERCER MUNDO FUTBOLERO AÑADIDO
 const estadosFiltro = [ 
     { valor: 'TODOS', icono: '🌍', color: '#00FFFF' }, 
     { valor: 'TRABAJO', icono: '🚜', color: '#FF4500' }, 
@@ -128,11 +133,17 @@ async function obtenerViajesDeFirebase() {
             if (!viajesObj[provLimpia]) viajesObj[provLimpia] = [];
             viajesObj[provLimpia].push({ id: docSnap.id, ...data });
         });
-    } catch(e) {}
+    } catch(e) {
+        console.error("Error obteniendo viajes:", e);
+    }
     return viajesObj;
 }
 
+let mapaYaInicializado = false; // Bandera para evitar que se cargue dos veces
 function inicializarMapa() {
+    if (mapaYaInicializado) return;
+    mapaYaInicializado = true;
+
     mapa = L.map('map', { zoomControl: false, dragging: true, scrollWheelZoom: true, doubleClickZoom: false, touchZoom: true, attributionControl: false }).setView([-9.5, -75.01], 5.0);
     Promise.all([ obtenerViajesDeFirebase(), fetch('./data/peru_provincial_simple.geojson').then(r => r.json()), fetch('./data/peru_departamental_simple.geojson').then(r => r.json()) ])
     .then(([viajesFirebase, provs, deps]) => { 
@@ -199,7 +210,6 @@ if (btnFiltro) {
     };
 }
 
-// DASHBOARD BENTO SLIDER
 btnDashboard.onclick = () => {
     let totProyectos = 0; let totPersonales = 0; let platosDestacados = 0; let provVisitadas = new Set();
     let estadios = [];
@@ -496,8 +506,21 @@ function actualizarProgresoDepartamental(nombreDepLimpio) {
     barraRelleno.style.width = porc + '%'; textoProgreso.innerText = porc + '%'; mascotaProgreso.style.left = porc + '%';
 }
 
-btnIngresar.onclick = () => {
-    if (inputPass.value === '1234') {
+// NUEVO: Lógica de Autenticación para el Botón Ingresar
+btnIngresar.onclick = async () => {
+    const emailValor = inputEmail.value.trim();
+    const passValor = inputPass.value;
+
+    if (!emailValor || !passValor) {
+        avatarGuia.src = './assets/img/mascota-triste.webp';
+        return;
+    }
+
+    avatarGuia.src = './assets/img/mascota-explora.webp'; // Pensando...
+    
+    try {
+        await signInWithEmailAndPassword(auth, emailValor, passValor);
+        // Si sale bien, entramos
         avatarGuia.src = './assets/img/mascota-feliz.webp';
         setTimeout(() => {
             pantallaAcceso.style.opacity = '0';
@@ -508,13 +531,46 @@ btnIngresar.onclick = () => {
                 reproducirMusicaAleatoria(); inicializarMapa();
             }, 800);
         }, 600);
-    } else {
-        avatarGuia.src = './assets/img/mascota-triste.webp'; inputPass.value = '';
+
+    } catch (error) {
+        console.error("Error de acceso:", error.message);
+        avatarGuia.src = './assets/img/mascota-triste.webp'; 
+        inputPass.value = '';
         setTimeout(() => { if (inputPass.value.length === 0) avatarGuia.src = './assets/img/mascota-hola.webp'; }, 2000); 
     }
 };
+
 inputPass.addEventListener('input', () => { avatarGuia.src = inputPass.value.length > 0 ? './assets/img/mascota-explora.webp' : './assets/img/mascota-hola.webp'; });
 btnMute.onclick = () => { audioAmbiental.muted = !audioAmbiental.muted; btnMute.textContent = audioAmbiental.muted ? '🔇' : '🔊'; };
 
 const btnActualizar = document.getElementById('btn-actualizar-app');
 if (btnActualizar) { btnActualizar.onclick = () => { btnActualizar.innerText = "⏳..."; if ('caches' in window) { caches.keys().then((names) => { Promise.all(names.map(name => caches.delete(name))).then(() => { window.location.reload(true); }); }); } else { window.location.reload(true); } }; }
+
+// NUEVO: Lógica de Cierre de Sesión
+if(btnCerrarSesion) {
+    btnCerrarSesion.onclick = async () => {
+        await signOut(auth);
+        cerrarDashboard();
+    };
+}
+
+// NUEVO: Persistencia de Sesión (Auto-login y logout visual)
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        // Logueado: Mostramos directamente el mapa
+        pantallaAcceso.style.display = 'none'; 
+        pantallaCarga.style.display = 'flex';
+        contenedorMapa.style.display = 'block'; 
+        tituloMapa.style.display = 'block';
+        contenedorProgreso.style.display = 'block';
+        inicializarMapa();
+    } else {
+        // No logueado: Mostramos la pantalla de inicio
+        pantallaAcceso.style.display = 'flex';
+        pantallaAcceso.style.opacity = '1';
+        contenedorMapa.style.display = 'none';
+        tituloMapa.style.display = 'none';
+        contenedorProgreso.style.display = 'none';
+    }
+});
+

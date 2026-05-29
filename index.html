@@ -19,7 +19,10 @@
     <div id="pantalla-acceso">
         <div class="acceso-flotante">
             <img src="./assets/img/mascota-hola.webp" id="avatar-guia" alt="Guía">
-            <p class="instruccion">Clave de Expedición</p>
+            <p class="instruccion">Acceso a la Expedición</p>
+            <div class="input-wrapper" style="margin-bottom: 15px;">
+                <input type="email" id="email" placeholder="tu@correo.com" style="width: 100%; background: transparent; border: none; color: white; text-align: center; font-size: 1rem; outline: none;">
+            </div>
             <div class="input-wrapper">
                 <input type="password" id="pass" placeholder="••••">
             </div>
@@ -39,6 +42,7 @@
         <button id="btn-cerrar-dashboard" style="position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 50%; width: 35px; height: 35px; color: white; font-weight: bold; cursor: pointer;">✖</button>
         <h2 class="titulo-chicha" style="color: #00FFFF; text-align: center; margin-bottom: 25px; font-size: 1.5rem;">CENTRO DE MANDO</h2>
         <div class="bento-grid" id="contenido-dashboard"></div>
+        <button id="btn-cerrar-sesion" class="btn-chicha" style="margin-top: 20px; background: linear-gradient(90deg, #FF4500, #FF1493); color: white; max-width: 500px; display: block; margin-left: auto; margin-right: auto;">🚪 Cerrar Sesión</button>
     </div>
 
     <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 9998; justify-content: center; align-items: center;">
