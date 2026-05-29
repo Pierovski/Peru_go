@@ -557,15 +557,27 @@ if(btnCerrarSesion) {
 // NUEVO: Persistencia de Sesión (Auto-login y logout visual)
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        // Logueado: Mostramos directamente el mapa
+        // Ya estás logueado, saltamos la pantalla de login directo al mapa
         pantallaAcceso.style.display = 'none'; 
         pantallaCarga.style.display = 'flex';
         contenedorMapa.style.display = 'block'; 
         tituloMapa.style.display = 'block';
         contenedorProgreso.style.display = 'block';
         inicializarMapa();
+        
+        // 1. Intentamos arrancar la música
+        reproducirMusicaAleatoria();
+
+        // 2. Solución Anti-Bloqueo: Si el navegador silenció el audio por saltarnos 
+        // la pantalla de login, la música arrancará al primer toque en cualquier parte de la pantalla.
+        document.body.addEventListener('click', () => {
+            if (audioAmbiental.paused) {
+                audioAmbiental.play().catch(() => {});
+            }
+        }, { once: true }); // El { once: true } hace que este evento se borre tras el primer clic
+
     } else {
-        // No logueado: Mostramos la pantalla de inicio
+        // No hay sesión, mostramos la pantalla de login
         pantallaAcceso.style.display = 'flex';
         pantallaAcceso.style.opacity = '1';
         contenedorMapa.style.display = 'none';
@@ -573,4 +585,5 @@ onAuthStateChanged(auth, (user) => {
         contenedorProgreso.style.display = 'none';
     }
 });
+
 
