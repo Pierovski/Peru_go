@@ -161,4 +161,43 @@ body, html {
 .contenedor-estrellas { font-size: 1.5rem; color: #555; cursor: pointer; user-select: none; }
 .contenedor-estrellas span { transition: color 0.2s; }
 .contenedor-estrellas span.activa { color: #FFD700; text-shadow: 0 0 10px #FFD700; }
- 
+ /* =========================================
+   NUEVO: EFECTOS DE LA CONQUISTA DORADA 🏆
+   ========================================= */
+.poligono-dorado {
+    filter: drop-shadow(0px 0px 15px rgba(255, 215, 0, 0.8)) drop-shadow(0px 0px 5px rgba(255, 255, 255, 0.5));
+    animation: latidoDorado 2s infinite alternate;
+}
+
+@keyframes latidoDorado {
+    0% { fill-opacity: 0.4; filter: drop-shadow(0px 0px 10px rgba(255, 215, 0, 0.6)); }
+    100% { fill-opacity: 0.75; filter: drop-shadow(0px 0px 25px rgba(255, 215, 0, 1)); }
+}
+
+.texto-conquista {
+    color: #FFD700 !important;
+    text-shadow: 0 0 10px #FFD700, 0 0 20px #FF4500 !important;
+    font-size: 1.1rem !important;
+    letter-spacing: 1px;
+}
+/* =========================================
+   NUEVO: CONSTELACIÓN DE RUTAS 🌌
+   ========================================= */
+.linea-constelacion {
+    stroke: #00FFFF;
+    stroke-width: 3;
+    filter: drop-shadow(0px 0px 5px #00FFFF) drop-shadow(0px 0px 10px #FF1493);
+    stroke-dasharray: 15, 20;
+    animation: viajarLuz 30s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes viajarLuz {
+    0% { stroke-dashoffset: 1000; }
+    100% { stroke-dashoffset: 0; }
+}
+
+.punto-ruta {
+    filter: drop-shadow(0px 0px 5px #FFD700);
+}
+

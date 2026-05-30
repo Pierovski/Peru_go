@@ -49,6 +49,11 @@ const contenedorProgreso = document.getElementById('contenedor-progreso');
 const barraRelleno = document.getElementById('barra-relleno');
 const mascotaProgreso = document.getElementById('mascota-progreso');
 const textoProgreso = document.getElementById('texto-progreso');
+const btnConstelacion = document.getElementById('btn-constelacion');
+let diccCentrosProvincias = {};
+let capaConstelacion = L.layerGroup();
+let modoConstelacionActivo = false;
+
 
 const btnMostrarFormulario = document.getElementById('btn-mostrar-formulario');
 const formRegistro = document.getElementById('formulario-registro');
@@ -147,29 +152,51 @@ function inicializarMapa() {
     mapa = L.map('map', { zoomControl: false, dragging: true, scrollWheelZoom: true, doubleClickZoom: false, touchZoom: true, attributionControl: false }).setView([-9.5, -75.01], 5.0);
     Promise.all([ obtenerViajesDeFirebase(), fetch('./data/peru_provincial_simple.geojson').then(r => r.json()), fetch('./data/peru_departamental_simple.geojson').then(r => r.json()) ])
     .then(([viajesFirebase, provs, deps]) => { 
-        datosViajes = viajesFirebase; datosProvinciasGenerales = provs; datosGeoJSON = deps; 
+        datosViajes = viajesFirebase; datosProvinciasGenerales = provs; datosGeoJSON = deps;
+        L.geoJSON(datosProvinciasGenerales, {
+            onEachFeature: function(feature, layer) {
+                diccCentrosProvincias[feature.properties.NOMBPROV.trim().toUpperCase()] = layer.getBounds().getCenter();
+            }
+        });
+
         dibujarMapaNacional(); actualizarProgresoGlobal(); 
         
         pantallaCarga.style.display = 'none';
         btnMute.style.display = 'flex'; btnFiltro.style.display = 'flex'; btnDashboard.style.display = 'flex';
+        btnConstelacion.style.display = 'flex'; // NUEVO: Mostrar botón galáctico
     });
 }
+
 
 function dibujarMapaNacional() {
     capaNacional = L.geoJSON(datosGeoJSON, {
         style: function (feature) {
             const nombreDepLimpio = feature.properties.NOMBDEP.trim().toUpperCase();
             const provsDelDep = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio);
-            let tieneVisita = false;
+            
+            let provsVisitadas = 0;
+            
             for(let p of provsDelDep) {
                 let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
                 if(datosViajes[provLimpia]) {
                     const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
-                    if(filtrados.length > 0) { tieneVisita = true; break; }
+                    if(filtrados.length > 0) { provsVisitadas++; }
                 }
             }
-            if (tieneVisita) { return { color: coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length], weight: 3, fillColor: coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length], fillOpacity: 0.35, className: 'poligono-vidrio' }; } 
-            else { return { color: "#f1c40f", weight: 1, fillColor: "transparent", fillOpacity: 0 }; }
+            
+            // NUEVO: Lógica de Conquista Dorada
+            const esConquistaDorada = (provsVisitadas === provsDelDep.length) && provsDelDep.length > 0;
+
+            if (esConquistaDorada) {
+                // Estilo Oro Supremo
+                return { color: "#FFF", weight: 3, fillColor: "#FFD700", fillOpacity: 0.6, className: 'poligono-dorado' };
+            } else if (provsVisitadas > 0) {
+                // Estilo Normal (Visitado parcialmente)
+                return { color: coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length], weight: 3, fillColor: coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length], fillOpacity: 0.35, className: 'poligono-vidrio' }; 
+            } else { 
+                // Estilo Vacío (Por explorar)
+                return { color: "#f1c40f", weight: 1, fillColor: "transparent", fillOpacity: 0 }; 
+            }
         },
         onEachFeature: function (feature, layer) {
             layer.on('click', function () {
@@ -200,6 +227,7 @@ function dibujarMapaNacional() {
         }
     }).addTo(mapa);
 }
+
 
 if (btnFiltro) {
     btnFiltro.onclick = () => {
@@ -496,14 +524,43 @@ function actualizarProgresoGlobal() {
     let porc = Math.round((visitados / datosProvinciasGenerales.features.length) * 100); if (visitados > 0 && porc === 0) porc = 1; 
     barraRelleno.style.width = porc + '%'; textoProgreso.innerText = porc + '%'; mascotaProgreso.style.left = porc + '%';
 }
+
 function actualizarProgresoDepartamental(nombreDepLimpio) {
     const provsDelDep = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio); let visitados = 0;
     provsDelDep.forEach(p => {
         let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
         if (datosViajes[provLimpia]) { const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo); if(filtrados.length > 0) visitados++; }
     });
-    let porc = provsDelDep.length === 0 ? 0 : Math.round((visitados / provsDelDep.length) * 100); if (visitados > 0 && porc === 0) porc = 1; 
-    barraRelleno.style.width = porc + '%'; textoProgreso.innerText = porc + '%'; mascotaProgreso.style.left = porc + '%';
+    
+    let porc = provsDelDep.length === 0 ? 0 : Math.round((visitados / provsDelDep.length) * 100); 
+    if (visitados > 0 && porc === 0) porc = 1; 
+    
+    barraRelleno.style.width = porc + '%'; 
+    mascotaProgreso.style.left = porc + '%';
+
+    // NUEVO: Detonador de La Conquista Dorada 🏆
+    if (porc === 100) {
+        barraRelleno.style.background = 'linear-gradient(90deg, #FFD700, #FFF, #FFD700)';
+        textoProgreso.innerText = '¡DOMINADO!';
+        textoProgreso.classList.add('texto-conquista');
+        
+        // Disparar confeti chicha
+        setTimeout(() => {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 250,
+                    spread: 120,
+                    origin: { y: 0.5 },
+                    colors: ['#FFD700', '#FF1493', '#00FFFF', '#FFFFFF'],
+                    zIndex: 10005
+                });
+            }
+        }, 300);
+    } else {
+        barraRelleno.style.background = 'linear-gradient(90deg, #FF1493, #00FA9A, #FFD700)';
+        textoProgreso.innerText = porc + '%';
+        textoProgreso.classList.remove('texto-conquista');
+    }
 }
 
 // NUEVO: Lógica de Autenticación para el Botón Ingresar
@@ -553,6 +610,65 @@ if(btnCerrarSesion) {
         cerrarDashboard();
     };
 }
+// NUEVO: Lógica del Botón Constelación de Rutas
+btnConstelacion.onclick = () => {
+    if (modoConstelacionActivo) {
+        // Apagar constelación
+        mapa.removeLayer(capaConstelacion);
+        modoConstelacionActivo = false;
+        btnConstelacion.style.boxShadow = "0 0 10px #9400D3";
+        return;
+    }
+
+    capaConstelacion.clearLayers();
+    
+    // 1. Recolectar todos los viajes que tengan fecha guardada
+    let todosLosViajes = [];
+    Object.keys(datosViajes).forEach(prov => {
+        datosViajes[prov].forEach(viaje => {
+            if(viaje.fecha) {
+                todosLosViajes.push({ ...viaje, provinciaReal: prov });
+            }
+        });
+    });
+
+    // 2. Ordenar cronológicamente (del más antiguo al más nuevo)
+    todosLosViajes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+    // 3. Obtener coordenadas
+    let puntosRuta = [];
+    todosLosViajes.forEach((v, index) => {
+        let centro = diccCentrosProvincias[v.provinciaReal];
+        if (centro) {
+            puntosRuta.push(centro);
+            
+            // Dibujar una estrella (marcador) en cada parada
+            L.circleMarker(centro, { 
+                radius: 4, 
+                color: '#FFF', 
+                weight: 1, 
+                fillColor: '#FFD700', 
+                fillOpacity: 1,
+                className: 'punto-ruta'
+            }).bindTooltip(`Parada ${index + 1}: ${v.nombre} (${v.fecha})`, { direction: 'top' })
+              .addTo(capaConstelacion);
+        }
+    });
+
+    // 4. Dibujar la línea de luz conectando todo
+    if (puntosRuta.length > 1) {
+        let linea = L.polyline(puntosRuta, { className: 'linea-constelacion' });
+        capaConstelacion.addLayer(linea);
+        
+        mapa.addLayer(capaConstelacion);
+        mapa.fitBounds(linea.getBounds(), { padding: [50, 50] });
+        
+        modoConstelacionActivo = true;
+        btnConstelacion.style.boxShadow = "0 0 20px #FFF, 0 0 30px #00FFFF";
+    } else {
+        alert("⚠️ Necesitas registrar al menos 2 expediciones con fecha para ver tu constelación.");
+    }
+};
 
 // NUEVO: Persistencia de Sesión (Auto-login y logout visual)
 onAuthStateChanged(auth, (user) => {
