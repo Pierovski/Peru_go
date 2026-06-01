@@ -557,10 +557,11 @@ function renderizarLugares(nombreLimpio, colorProvincia) {
 
     lugares.forEach(lugar => {
         let htmlFotos = '';
+        
         if (lugar.foto1 || lugar.foto2) {
-            htmlFotos = `<div style="display: flex; gap: 4%; margin-top: 15px;">`;
-            if(lugar.foto1) htmlFotos += `<img data-src="${lugar.foto1}" src="" class="foto-viaje lazy-foto" onclick="abrirVisorFotos('${lugar.foto1}')">`;
-            if(lugar.foto2) htmlFotos += `<img data-src="${lugar.foto2}" src="" class="foto-viaje lazy-foto" onclick="abrirVisorFotos('${lugar.foto2}')">`;
+            htmlFotos = `<div style="display: flex; gap: 4%; margin-top: 15px; justify-content: center;">`;
+            if(lugar.foto1) htmlFotos += `<img src="${lugar.foto1}" style="width: 48%; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #00FFFF; cursor: pointer; box-shadow: 0 0 10px rgba(0,255,255,0.2);" onclick="abrirVisorFotos('${lugar.foto1}')">`;
+            if(lugar.foto2) htmlFotos += `<img src="${lugar.foto2}" style="width: 48%; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #00FFFF; cursor: pointer; box-shadow: 0 0 10px rgba(0,255,255,0.2);" onclick="abrirVisorFotos('${lugar.foto2}')">`;
             htmlFotos += `</div>`;
         }
 
