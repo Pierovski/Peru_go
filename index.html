@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="style.css?v=7">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Paytone+One&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
     <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer; font-family: 'Montserrat', sans-serif;">actualizar</button>
@@ -37,13 +37,27 @@
         <p class="instruccion" style="margin-top: 15px; font-size: 0.9rem;">Sincronizando Base de Datos...</p>
     </div>
 
+    <div id="pantalla-buscador" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10,17,24,0.98); z-index: 10005; flex-direction: column; align-items: center; padding-top: 50px; opacity: 0; transition: opacity 0.3s ease;">
+        <button onclick="cerrarBuscador()" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: #00FFFF; font-size: 2rem; cursor: pointer; font-weight: bold;">✖</button>
+        <h2 class="titulo-chicha" style="color: #FF1493; font-size: 1.5rem; margin-bottom: 20px;">BUSCADOR DE EXPEDICIONES</h2>
+        <input type="text" id="input-buscador" class="input-chicha" placeholder="Lugar, obra, estadio, ciudad..." style="width: 85%; max-width: 400px; font-size: 1.1rem; border-color: #00FFFF; text-align: center;">
+        <div id="resultados-buscador" style="width: 85%; max-width: 400px; margin-top: 20px; overflow-y: auto; max-height: 65vh;"></div>
+    </div>
+
     <div id="fondo-dashboard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999;"></div>
+    
     <div id="pantalla-dashboard" class="dashboard-bento">
         <div class="indicador-deslizador"></div>
         <button id="btn-cerrar-dashboard" style="position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 50%; width: 35px; height: 35px; color: white; font-weight: bold; cursor: pointer;">✖</button>
         <h2 class="titulo-chicha" style="color: #00FFFF; text-align: center; margin-bottom: 25px; font-size: 1.5rem;">CENTRO DE MANDO</h2>
+        
         <div class="bento-grid" id="contenido-dashboard"></div>
-        <button id="btn-cerrar-sesion" class="btn-chicha" style="margin-top: 20px; background: linear-gradient(90deg, #FF4500, #FF1493); color: white; max-width: 500px; display: block; margin-left: auto; margin-right: auto;">🚪 Cerrar Sesión</button>
+        
+        <button id="btn-backup" class="btn-chicha" style="margin-top: 20px; background: linear-gradient(90deg, #9400D3, #4B0082); color: white; max-width: 500px; display: block; margin-left: auto; margin-right: auto;">💾 Descargar Copia Local</button>
+        <input type="file" id="input-importar" accept=".json" style="display: none;">
+        <button id="btn-importar" class="btn-chicha" style="margin-top: 10px; background: linear-gradient(90deg, #00FA9A, #00BFFF); color: white; max-width: 500px; display: block; margin-left: auto; margin-right: auto;">📂 Restaurar Copia Local</button>
+        
+        <button id="btn-cerrar-sesion" class="btn-chicha" style="margin-top: 10px; background: linear-gradient(90deg, #FF4500, #FF1493); color: white; max-width: 500px; display: block; margin-left: auto; margin-right: auto;">🚪 Cerrar Sesión</button>
     </div>
 
     <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 9998; justify-content: center; align-items: center;">
@@ -153,12 +167,33 @@
     <h2 id="titulo-departamento" class="titulo-chicha"></h2>
     
     <button id="btn-volver" class="btn-flotante-volver" style="display: none;">🔙</button>
+
     <div id="map"></div>
     
-    <button id="btn-dashboard" class="btn-flotante" style="display: none; bottom: 235px; left: 20px; border-color: #FFD700; box-shadow: 0 0 10px #FFD700; font-size: 1.2rem;">📊</button>
-    <button id="btn-filtro" class="btn-flotante" style="display: none; bottom: 180px; left: 20px; border-color: #00FFFF; box-shadow: 0 0 10px #00FFFF; font-size: 1.2rem;">🌍</button>
-    <button id="btn-mute" class="btn-flotante" style="display: none;">🔊</button>
-    <button id="btn-constelacion" class="btn-flotante" style="display: none; bottom: 290px; left: 20px; border-color: #9400D3; box-shadow: 0 0 10px #9400D3; font-size: 1.2rem;">🌌</button>
+        <div id="contenedor-menu-flotante" style="display: none; position: fixed; bottom: 100px; left: 20px; z-index: 9999;">
+        <div id="menu-hijos" style="position: absolute; bottom: 65px; left: 0; display: flex; flex-direction: column-reverse; gap: 15px; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.3s ease;">
+            <button id="btn-mute" class="btn-flotante" style="position: relative; inset: auto; margin: 0;">🔊</button>
+            <button id="btn-filtro" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #00FFFF; box-shadow: 0 0 10px #00FFFF;">🌍</button>
+            <button id="btn-dashboard" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #FFD700; box-shadow: 0 0 10px #FFD700;">📊</button>
+            <button id="btn-constelacion" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #9400D3; box-shadow: 0 0 10px #9400D3;">🌌</button>
+            <button id="btn-buscar" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #FF1493; box-shadow: 0 0 10px #FF1493;">🔍</button>
+        </div>
+        
+        <button id="btn-maestro-menu" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #FFF; box-shadow: 0 0 15px rgba(255,255,255,0.5); font-size: 1.5rem; transition: all 0.3s ease;">🛠️</button>
+    </div>
+        <div id="menu-hijos" style="display: flex; flex-direction: column-reverse; gap: 15px; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.3s ease;">
+            <button id="btn-mute" class="btn-flotante" style="position: static;">🔊</button>
+            <button id="btn-filtro" class="btn-flotante" style="position: static; border-color: #00FFFF; box-shadow: 0 0 10px #00FFFF;">🌍</button>
+            <button id="btn-dashboard" class="btn-flotante" style="position: static; border-color: #FFD700; box-shadow: 0 0 10px #FFD700;">📊</button>
+            <button id="btn-constelacion" class="btn-flotante" style="position: static; border-color: #9400D3; box-shadow: 0 0 10px #9400D3;">🌌</button>
+            <button id="btn-buscar" class="btn-flotante" style="position: static; border-color: #FF1493; box-shadow: 0 0 10px #FF1493;">🔍</button>
+        </div>
+    </div>
+    <div id="visor-fotos" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.92); z-index: 10010; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transition: opacity 0.3s ease;">
+        <button onclick="cerrarVisorFotos()" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: #FFF; font-size: 2.5rem; cursor: pointer; font-weight: bold; z-index: 10011; text-shadow: 0 0 10px #000;">✖</button>
+        <img id="img-visor" src="" style="max-width: 95%; max-height: 85vh; border: 2px solid #00FFFF; border-radius: 10px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.3); object-fit: contain;">
+    </div>
+
     <div id="contenedor-progreso">
         <div id="barra-fondo"><div id="barra-relleno"></div></div>
         <img src="./assets/img/mascota-explora.webp" id="mascota-progreso" alt="Explorador">
@@ -166,7 +201,13 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="app.js?v=6"></script>
+        <!-- VISOR DE FOTOS NATIVO (LIGHTBOX) -->
+    <div id="visor-fotos" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.92); z-index: 10010; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transition: opacity 0.3s ease;">
+        <button onclick="cerrarVisorFotos()" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: #FFF; font-size: 2.5rem; cursor: pointer; font-weight: bold; z-index: 10011; text-shadow: 0 0 10px #000;">✖</button>
+        <img id="img-visor" src="" style="max-width: 95%; max-height: 85vh; border: 2px solid #00FFFF; border-radius: 10px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.3); object-fit: contain;">
+    </div>
+    <script type="module" src="firebase.js"></script>
+    <script type="module" src="app.js?v=8"></script>
     <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }</script>
 </body>
 </html>
