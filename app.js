@@ -1,8 +1,7 @@
 "use strict";
 
-// 1. IMPORTACIONES
+// 1. IMPORTACIONES FIREBASE
 import { db, auth, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "./firebase.js";
-
 const IMGBB_API_KEY = "055cde6238b2cefe13e31dc43f2b2570"; 
 
 // 2. REFERENCIAS AL DOM
@@ -11,15 +10,14 @@ const btnVolver = document.getElementById('btn-volver');
 const pantallaInfo = document.getElementById('pantalla-info');
 const tarjetaContenidoInfo = document.querySelector('.info-contenido'); 
 const tituloInfoProvincia = document.getElementById('info-provincia-titulo');
+const rangoProvincia = document.getElementById('rango-provincia'); 
 const contenedorLugares = document.getElementById('info-lugares');
 const btnCerrarInfo = document.getElementById('btn-cerrar-info');
-
 const pantallaCarga = document.getElementById('pantalla-carga');
 const pantallaDashboard = document.getElementById('pantalla-dashboard');
 const fondoDashboard = document.getElementById('fondo-dashboard');
 const btnCerrarDashboard = document.getElementById('btn-cerrar-dashboard');
 const contenidoDashboard = document.getElementById('contenido-dashboard');
-
 const btnIngresar = document.getElementById('btn-ingresar');
 const inputEmail = document.getElementById('email');
 const inputPass = document.getElementById('pass');
@@ -27,14 +25,19 @@ const btnCerrarSesion = document.getElementById('btn-cerrar-sesion');
 const pantallaAcceso = document.getElementById('pantalla-acceso');
 const contenedorMapa = document.getElementById('map');
 
-// Menú y herramientas
-const btnMaestro = document.getElementById('btn-maestro-menu');
-const menuHijos = document.getElementById('menu-hijos');
+const barraNavegacion = document.getElementById('contenedor-bottom-bar');
 const btnMute = document.getElementById('btn-mute');
 const btnFiltro = document.getElementById('btn-filtro');
 const btnDashboard = document.getElementById('btn-dashboard');
-const btnConstelacion = document.getElementById('btn-constelacion');
 const btnBuscar = document.getElementById('btn-buscar');
+const btnCapas = document.getElementById('btn-capas'); 
+
+const pantallaFiltros = document.getElementById('pantalla-filtros');
+const btnCerrarFiltros = document.getElementById('btn-cerrar-filtros');
+const btnLimpiarFiltros = document.getElementById('btn-limpiar-filtros');
+const btnAplicarFiltros = document.getElementById('btn-aplicar-filtros');
+const inputFiltroInicio = document.getElementById('filtro-fecha-inicio');
+const inputFiltroFin = document.getElementById('filtro-fecha-fin');
 
 const avatarGuia = document.getElementById('avatar-guia');
 const tituloMapa = document.getElementById('titulo-mapa');
@@ -42,18 +45,12 @@ const contenedorProgreso = document.getElementById('contenedor-progreso');
 const barraRelleno = document.getElementById('barra-relleno');
 const mascotaProgreso = document.getElementById('mascota-progreso');
 const textoProgreso = document.getElementById('texto-progreso');
-
-// Buscador
 const pantallaBuscador = document.getElementById('pantalla-buscador');
 const inputBuscador = document.getElementById('input-buscador');
 const resultadosBuscador = document.getElementById('resultados-buscador');
-
-// Import / Export
 const btnBackup = document.getElementById('btn-backup');
 const btnImportar = document.getElementById('btn-importar');
 const inputImportar = document.getElementById('input-importar');
-
-// Formularios
 const btnMostrarFormulario = document.getElementById('btn-mostrar-formulario');
 const formRegistro = document.getElementById('formulario-registro');
 const btnGuardarRegistro = document.getElementById('btn-guardar-registro');
@@ -63,736 +60,420 @@ const selectTipo = document.getElementById('nuevo-tipo');
 const camposTrabajo = document.getElementById('campos-trabajo');
 const camposPersonal = document.getElementById('campos-personal');
 const camposFutbol = document.getElementById('campos-futbol');
+const btnWrapped = document.getElementById('btn-wrapped');
+const btnRuleta = document.getElementById('btn-ruleta');
 
 // 3. ESTADO GLOBAL
 let diccCentrosProvincias = {};
-let capaConstelacion = L.layerGroup();
-let modoConstelacionActivo = false;
 let idEdicionActual = null;
-let seleccionClima = ''; 
-let seleccionTransporte = '';
+let seleccionClima = ''; let seleccionTransporte = '';
 let estrellasValor = { empresa: 0, gastro: 0, hosp: 0, atrac: 0, ambiente: 0 };
-let filtroActualMundo = 'TODOS'; 
-let indiceFiltro = 0;
-let capaNacional; 
-let capaProvincias; 
-let mapa; 
-let datosGeoJSON = null;
-let datosProvinciasGenerales = null; 
-let datosViajes = {}; 
-let temporizadorBuscador; 
-let menuAbierto = false;
+let filtroActualMundo = 'TODOS'; let filtroFechaInicio = null; let filtroFechaFin = null;
+let capaNacional; let capaProvincias; let mapa; let datosGeoJSON = null; let datosProvinciasGenerales = null; let datosViajes = {}; 
+let temporizadorBuscador; let capaSatelite; let sateliteActivo = false;
+let capaPinesProvincia; let capaPinTemporal; let tempLat = null; let tempLng = null; let seleccionandoUbicacion = false; let markerDraggable = null;
+let mapaYaInicializado = false;
 
-const estadosFiltro = [ 
-    { valor: 'TODOS', icono: '🌍', color: '#00FFFF' }, 
-    { valor: 'TRABAJO', icono: '🚜', color: '#FF4500' }, 
-    { valor: 'PERSONAL', icono: '🍹', color: '#00FA9A' },
-    { valor: 'FUTBOL', icono: '⚽', color: '#FFF' }
-];
 const coloresChichaPremium = [ "#FF1493", "#00FA9A", "#FFD700", "#00FFFF", "#FF4500", "#9400D3" ];
 const audios = [ './assets/audio/musica-uno.mp3', './assets/audio/musica-dos.mp3', './assets/audio/musica-tres.mp3' ];
 const audioAmbiental = new Audio();
+const iconosFiltro = { 'TODOS': '🌍', 'TRABAJO': '🚜', 'PERSONAL': '🍹', 'FUTBOL': '⚽', 'SABOR': '🍜' };
 
-// 4. FUNCIONES BASE
-function insertarTarjetaLugarSegura(htmlString) {
-    contenedorLugares.insertAdjacentHTML('beforeend', htmlString);
+// BANCO DE DESAFÍOS NÓMADAS
+const desafiosNomadas = [
+    "Prueba el plato o bebida más rara que encuentres en el mercado local.",
+    "Busca el punto más alto del lugar y toma una foto panorámica.",
+    "Pregúntale a un local sobre un mito o leyenda de esta zona.",
+    "Tómate un selfie curioso con el letrero de bienvenida o la Plaza de Armas.",
+    "Encuentra una calle sin asfaltar y anota algo que te llame la atención."
+];
+
+// 4. FUNCIONES UX Y FILTROS
+function pasaFiltros(viaje) {
+    const vTipo = viaje.tipo || 'PERSONAL';
+    if (filtroActualMundo === 'SABOR') return viaje.gastro === 5; 
+    if (filtroActualMundo !== 'TODOS' && vTipo !== filtroActualMundo) return false;
+    if (filtroFechaInicio && (!viaje.fecha || viaje.fecha < filtroFechaInicio)) return false;
+    if (filtroFechaFin && (!viaje.fecha || viaje.fecha > filtroFechaFin)) return false;
+    return true;
 }
 
-document.querySelectorAll('#selector-clima .btn-opcion').forEach(btn => {
-    btn.onclick = () => { document.querySelectorAll('#selector-clima .btn-opcion').forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); seleccionClima = btn.dataset.valor; };
-});
-document.querySelectorAll('#selector-transporte .btn-opcion').forEach(btn => {
-    btn.onclick = () => { document.querySelectorAll('#selector-transporte .btn-opcion').forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); seleccionTransporte = btn.dataset.valor; };
-});
+function mostrarToast(mensaje, tipo = 'success') {
+    const container = document.getElementById('toast-container'); const toast = document.createElement('div');
+    toast.className = `toast ${tipo}`; toast.innerHTML = tipo === 'success' ? `✅ ${mensaje}` : `⚠️ ${mensaje}`;
+    container.appendChild(toast); setTimeout(() => { if(toast.parentNode) toast.remove(); }, 4000); 
+}
 
-function inicializarEstrellas(contenedorId, claveValor) {
-    const contenedor = document.getElementById(contenedorId);
-    if(!contenedor) return;
-    const estrellas = contenedor.querySelectorAll('span');
-    estrellas.forEach((estrella, idx) => {
-        estrella.onclick = () => {
-            estrellasValor[claveValor] = idx + 1;
-            estrellas.forEach((e, i) => { e.classList.toggle('activa', i <= idx); });
+function habilitarSwipeToClose(elSel, cb) {
+    const el = document.querySelector(elSel); if (!el) return; let startY = 0; let currentY = 0;
+    el.addEventListener('touchstart', (e) => { if (el.scrollTop <= 0) startY = e.touches[0].clientY; }, { passive: true });
+    el.addEventListener('touchmove', (e) => { if (!startY) return; currentY = e.touches[0].clientY; const diffY = currentY - startY; if (diffY > 0) { el.style.transition = 'none'; el.style.transform = `translateY(${diffY}px)`; } }, { passive: true });
+    el.addEventListener('touchend', () => { if (!startY || !currentY) return; const diffY = currentY - startY; el.style.transition = 'transform 0.3s'; if (diffY > 120) cb(); else el.style.transform = ''; startY = 0; currentY = 0; });
+}
+
+function mostrarSkeletonLoading() { contenedorLugares.innerHTML = `<div class="lugar-card esqueleto" style="height: 100px; border-left-color: #333;"><div class="esqueleto-titulo" style="background: rgba(255,255,255,0.1); margin-top: 15px;"></div><div class="esqueleto-texto" style="background: rgba(255,255,255,0.05);"></div></div>`; }
+
+async function comprimirYSubirImagen(file) {
+    return new Promise((res, rej) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image(); img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas'); const MAX = 1200; const scale = MAX / img.width;
+                canvas.width = img.width > MAX ? MAX : img.width; canvas.height = img.width > MAX ? img.height * scale : img.height;
+                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(async (blob) => {
+                    const fd = new FormData(); fd.append('image', blob, 'foto.jpg');
+                    try { const r = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const d = await r.json(); res(d.data.url); } catch (e) { rej(e); }
+                }, 'image/jpeg', 0.8); 
+            };
         };
     });
 }
-inicializarEstrellas('estrellas-empresa', 'empresa'); 
-inicializarEstrellas('estrellas-gastro', 'gastro');
-inicializarEstrellas('estrellas-hosp', 'hosp'); 
-inicializarEstrellas('estrellas-atrac', 'atrac');
-inicializarEstrellas('estrellas-ambiente', 'ambiente');
 
-function resetUIFormulario() {
-    document.querySelectorAll('.btn-opcion').forEach(b => b.classList.remove('seleccionado'));
-    document.querySelectorAll('.contenedor-estrellas span').forEach(s => s.classList.remove('activa'));
-    seleccionClima = ''; seleccionTransporte = ''; estrellasValor = { empresa: 0, gastro: 0, hosp: 0, atrac: 0, ambiente: 0 };
+function comprobarEfemerides() {
+    const hoy = new Date(); const mesDia = `${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+    let hallado = null; let anios = 0;
+    Object.values(datosViajes).forEach(p => p.forEach(v => {
+        if(v.fecha && (v.estado||'VISITADO')==='VISITADO' && !hallado) {
+            const part = v.fecha.split('-');
+            if(part.length===3 && `${part[1]}-${part[2]}`===mesDia && parseInt(part[0])<hoy.getFullYear()) { hallado = v; anios = hoy.getFullYear() - parseInt(part[0]); }
+        }
+    }));
+    if(hallado) setTimeout(() => mostrarToast(`Cápsula del Tiempo: Hace ${anios} año(s) estabas en ${hallado.nombre} 🕰️`, 'success'), 2000);
 }
 
-function reproducirMusicaAleatoria() { audioAmbiental.src = audios[Math.floor(Math.random() * audios.length)]; audioAmbiental.play().catch(() => {}); }
-audioAmbiental.addEventListener('ended', reproducirMusicaAleatoria);
+// =========================================
+// 5. INICIALIZACIÓN MAPA Y GIS
+// =========================================
+function insertarTarjetaLugarSegura(htmlString) { contenedorLugares.insertAdjacentHTML('beforeend', htmlString); }
+document.querySelectorAll('.btn-opcion:not(#filtro-categoria .btn-opcion)').forEach(btn => { btn.onclick = function() { const parent = this.parentElement; parent.querySelectorAll('.btn-opcion').forEach(b => b.classList.remove('seleccionado')); this.classList.add('seleccionado'); if(parent.id==='selector-clima') seleccionClima=this.dataset.valor; if(parent.id==='selector-transporte') seleccionTransporte=this.dataset.valor; }; });
+function inicializarEstrellas(id, clave) { const c = document.getElementById(id); if(!c) return; const s = c.querySelectorAll('span'); s.forEach((e, idx) => { e.onclick = () => { estrellasValor[clave] = idx + 1; s.forEach((x, i) => { x.classList.toggle('activa', i <= idx); }); }; }); }
+['empresa','gastro','hosp','atrac','ambiente'].forEach(k => inicializarEstrellas(`estrellas-${k}`, k));
 
-async function obtenerViajesDeFirebase() {
-    const viajesObj = {};
-    try {
-        const querySnapshot = await getDocs(collection(db, "viajes"));
-        querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const provLimpia = data.provincia.trim().toUpperCase();
-            if (!viajesObj[provLimpia]) viajesObj[provLimpia] = [];
-            viajesObj[provLimpia].push({ id: docSnap.id, ...data });
-        });
-    } catch(e) { console.error("Error obteniendo viajes:", e); }
-    return viajesObj;
-}
+function resetUIFormulario() { document.querySelectorAll('#formulario-registro .btn-opcion').forEach(b => b.classList.remove('seleccionado')); document.querySelectorAll('.contenedor-estrellas span').forEach(s => s.classList.remove('activa')); seleccionClima = ''; seleccionTransporte = ''; estrellasValor = { empresa:0, gastro:0, hosp:0, atrac:0, ambiente:0 }; }
+function reproducirMusicaAleatoria() { audioAmbiental.src = audios[Math.floor(Math.random() * audios.length)]; audioAmbiental.play().catch(()=>{}); } audioAmbiental.addEventListener('ended', reproducirMusicaAleatoria);
 
-let mapaYaInicializado = false;
+async function obtenerViajesDeFirebase() { const obj = {}; try { const q = await getDocs(collection(db, "viajes")); q.forEach(d => { const data=d.data(); const p=data.provincia.trim().toUpperCase(); if(!obj[p]) obj[p]=[]; obj[p].push({id:d.id, ...data}); }); } catch(e){} return obj; }
+
 function inicializarMapa() {
-    if (mapaYaInicializado) return;
-    mapaYaInicializado = true;
-
+    if (mapaYaInicializado) return; mapaYaInicializado = true;
     mapa = L.map('map', { zoomControl: false, dragging: true, scrollWheelZoom: true, doubleClickZoom: false, touchZoom: true, attributionControl: false }).setView([-9.5, -75.01], 5.0);
-    Promise.all([ obtenerViajesDeFirebase(), fetch('./data/peru_provincial_simple.geojson').then(r => r.json()), fetch('./data/peru_departamental_simple.geojson').then(r => r.json()) ])
-    .then(([viajesFirebase, provs, deps]) => { 
-        datosViajes = viajesFirebase; datosProvinciasGenerales = provs; datosGeoJSON = deps;
-        L.geoJSON(datosProvinciasGenerales, {
-            onEachFeature: function(feature, layer) {
-                diccCentrosProvincias[feature.properties.NOMBPROV.trim().toUpperCase()] = layer.getBounds().getCenter();
-            }
-        });
+    capaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+    capaPinesProvincia = L.layerGroup().addTo(mapa); capaPinTemporal = L.layerGroup().addTo(mapa);
 
-        dibujarMapaNacional(); actualizarProgresoGlobal(); 
-        
-        pantallaCarga.style.display = 'none';
-        const menuFlotante = document.getElementById('contenedor-menu-flotante');
-        if (menuFlotante) menuFlotante.style.display = 'flex'; 
+    mapa.on('click', (e) => {
+        if (seleccionandoUbicacion && !markerDraggable) {
+            tempLat = e.latlng.lat; tempLng = e.latlng.lng; capaPinTemporal.clearLayers();
+            const icon = L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [28, 28], iconAnchor: [14, 28] });
+            markerDraggable = L.marker([tempLat, tempLng], {icon: icon, draggable: true}).addTo(capaPinTemporal);
+            markerDraggable.on('dragend', function(ev) { tempLat = ev.target.getLatLng().lat; tempLng = ev.target.getLatLng().lng; });
+            mostrarToast("Chinche colocado. Arrástralo al punto exacto.", "success");
+        }
+    });
+
+    Promise.all([ obtenerViajesDeFirebase(), fetch('./data/peru_provincial_simple.geojson').then(r => r.json()), fetch('./data/peru_departamental_simple.geojson').then(r => r.json()) ]).then(([v, p, d]) => { 
+        datosViajes = v; datosProvinciasGenerales = p; datosGeoJSON = d;
+        L.geoJSON(p, { onEachFeature: function(f, l) { diccCentrosProvincias[f.properties.NOMBPROV.trim().toUpperCase()] = l.getBounds().getCenter(); } });
+        dibujarMapaNacional(); actualizarProgresoGlobal(); pantallaCarga.style.display = 'none'; if(barraNavegacion) barraNavegacion.style.display = 'flex'; 
+        comprobarEfemerides(); 
     });
 }
 
 function dibujarMapaNacional() {
     capaNacional = L.geoJSON(datosGeoJSON, {
-        style: function (feature) {
-            const nombreDepLimpio = feature.properties.NOMBDEP.trim().toUpperCase();
-            const provsDelDep = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio);
-            let provsVisitadas = 0;
-            
-            for(let p of provsDelDep) {
-                let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
-                if(datosViajes[provLimpia]) {
-                    const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
-                    if(filtrados.length > 0) provsVisitadas++;
+        style: function (f) {
+            const nomD = f.properties.NOMBDEP.trim().toUpperCase(); const provs = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nomD);
+            let visitadas=0; let wishlist=0;
+            for(let p of provs) {
+                let nP = p.properties.NOMBPROV.trim().toUpperCase();
+                if(datosViajes[nP]) {
+                    const filt = datosViajes[nP].filter(pasaFiltros);
+                    if(filt.some(v => (v.estado||'VISITADO')==='VISITADO')) visitadas++;
+                    else if(filt.some(v => v.estado==='WISHLIST')) wishlist++;
                 }
             }
-            
-            const esConquistaDorada = (provsVisitadas === provsDelDep.length) && provsDelDep.length > 0;
-            if (esConquistaDorada) return { color: "#FFF", weight: 3, fillColor: "#FFD700", fillOpacity: 0.6, className: 'poligono-dorado' };
-            else if (provsVisitadas > 0) return { color: coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length], weight: 3, fillColor: coloresChichaPremium[nombreDepLimpio.length % coloresChichaPremium.length], fillOpacity: 0.35, className: 'poligono-vidrio' }; 
-            else return { color: "#f1c40f", weight: 1, fillColor: "transparent", fillOpacity: 0 }; 
+            if (visitadas === provs.length && provs.length>0) return { color: "#FFF", weight: 3, fillColor: "#FFD700", fillOpacity: 0.6, className: 'poligono-dorado' };
+            else if (visitadas > 0) return { color: coloresChichaPremium[nomD.length % coloresChichaPremium.length], weight: 3, fillColor: coloresChichaPremium[nomD.length % coloresChichaPremium.length], fillOpacity: 0.35, className: 'poligono-vidrio' }; 
+            else if (wishlist > 0) return { color: "#00FFFF", weight: 2, fillColor: "#00FFFF", fillOpacity: 0.15, className: 'poligono-wishlist' };
+            else return { color: "#555", weight: 1, fillColor: "#222", fillOpacity: 0.8, className: 'poligono-raspadita' }; 
         },
-        onEachFeature: function (feature, layer) {
-            layer.on('click', function () {
-                const nombreDep = feature.properties.NOMBDEP;
-                layer.setStyle({ color: "#FFFFFF", weight: 4, fillOpacity: 0.5 });
-                
-                const menuFlotante = document.getElementById('contenedor-menu-flotante');
-                if (menuFlotante) menuFlotante.style.display = 'none'; 
-                
+        onEachFeature: function (f, l) {
+            l.on('click', function () {
+                const nD = f.properties.NOMBDEP; l.setStyle({ color: "#FFFFFF", weight: 4, fillOpacity: 0.5 });
                 setTimeout(() => {
                     mapa.removeLayer(capaNacional);
-                    const filtradas = { type: "FeatureCollection", features: datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDep.trim().toUpperCase()) };
-                    capaProvincias = L.geoJSON(filtradas, {
-                        style: function(fProv) {
-                            const provLimpia = fProv.properties.NOMBPROV.trim().toUpperCase();
-                            const c = coloresChichaPremium[fProv.properties.NOMBPROV.length % coloresChichaPremium.length];
-                            let tieneVisita = false;
-                            if (datosViajes[provLimpia]) { const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo); if(filtrados.length > 0) tieneVisita = true; }
-                            if (tieneVisita) return { color: c, weight: 3, fillColor: c, fillOpacity: 0.35, className: 'poligono-vidrio' }; 
-                            else return { color: c, weight: 1, fillColor: "#000", fillOpacity: 0.4, dashArray: "4 5" };
+                    const filt = { type: "FeatureCollection", features: datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nD.trim().toUpperCase()) };
+                    capaProvincias = L.geoJSON(filt, {
+                        style: function(fP) {
+                            const nP = fP.properties.NOMBPROV.trim().toUpperCase(); const c = coloresChichaPremium[fP.properties.NOMBPROV.length % coloresChichaPremium.length];
+                            let hasV=false; let hasW=false;
+                            if(datosViajes[nP]) { const filtrados = datosViajes[nP].filter(pasaFiltros); hasV=filtrados.some(v=>(v.estado||'VISITADO')==='VISITADO'); hasW=filtrados.some(v=>v.estado==='WISHLIST'); }
+                            if (hasV) return { color: c, weight: 3, fillColor: c, fillOpacity: 0.35, className: 'poligono-vidrio' }; 
+                            else if (hasW) return { color: "#00FFFF", weight: 2, fillColor: "#00FFFF", fillOpacity: 0.15, className: 'poligono-wishlist' };
+                            else return { color: "#444", weight: 1, fillColor: "#111", fillOpacity: 0.7, className: 'poligono-raspadita' };
                         },
                         onEachFeature: function(fP, lP) {
-                            const nombreProv = fP.properties.NOMBPROV;
-                            const c = coloresChichaPremium[nombreProv.length % coloresChichaPremium.length];
-                            lP.bindTooltip(`<span style="color: ${c};">${nombreProv}</span>`, { permanent: true, direction: 'center', className: 'etiqueta-provincia', interactive: false });
-                            lP.on('click', () => { 
-                                abrirInformacionProvincia(nombreProv, c); 
-                            });
+                            const nP = fP.properties.NOMBPROV; const c = coloresChichaPremium[nP.length % coloresChichaPremium.length];
+                            lP.bindTooltip(`<span style="color: ${c};">${nP}</span>`, { permanent: true, direction: 'center', className: 'etiqueta-provincia', interactive: false }); lP.on('click', () => { abrirInformacionProvincia(nP, c); });
                         }
                     }).addTo(mapa);
-                    mapa.fitBounds(layer.getBounds());
-                    tituloMapa.style.display = 'none'; tituloDepartamento.innerText = nombreDep; tituloDepartamento.style.display = 'block'; btnVolver.style.display = 'flex'; actualizarProgresoDepartamental(nombreDep.trim().toUpperCase());
+                    mapa.fitBounds(l.getBounds()); tituloMapa.style.display = 'none'; tituloDepartamento.innerText = nD; tituloDepartamento.style.display = 'block'; btnVolver.style.display = 'inline-block'; actualizarProgresoDepartamental(nD.trim().toUpperCase());
                 }, 400);
             });
         }
     }).addTo(mapa);
 }
 
-// 5. LÓGICA DE MENÚ Y HERRAMIENTAS
-if (btnMaestro) {
-    btnMaestro.onclick = () => {
-        menuAbierto = !menuAbierto;
-        if (menuAbierto) {
-            menuHijos.style.opacity = '1';
-            menuHijos.style.pointerEvents = 'auto';
-            menuHijos.style.transform = 'translateY(0)';
-            btnMaestro.style.transform = 'scale(0.7) rotate(45deg)'; 
-            btnMaestro.style.borderColor = '#FF1493'; 
-        } else {
-            menuHijos.style.opacity = '0';
-            menuHijos.style.pointerEvents = 'none';
-            menuHijos.style.transform = 'translateY(20px)';
-            btnMaestro.style.transform = 'scale(1) rotate(0deg)';
-            btnMaestro.style.borderColor = '#FFF';
-        }
-    };
-}
+if (btnCapas) { btnCapas.onclick = () => { if(sateliteActivo){ mapa.removeLayer(capaSatelite); btnCapas.style.textShadow="";}else{ capaSatelite.addTo(mapa); capaSatelite.bringToBack(); btnCapas.style.textShadow="0 0 15px #00FFFF";} sateliteActivo=!sateliteActivo; }; }
 
-if (btnFiltro) {
-    btnFiltro.onclick = () => {
-        indiceFiltro = (indiceFiltro + 1) % estadosFiltro.length; 
-        filtroActualMundo = estadosFiltro[indiceFiltro].valor;
-        btnFiltro.innerText = estadosFiltro[indiceFiltro].icono; 
-        btnFiltro.style.borderColor = estadosFiltro[indiceFiltro].color; 
-        btnFiltro.style.boxShadow = `0 0 10px ${estadosFiltro[indiceFiltro].color}`;
-        
-        if (capaNacional && (!btnVolver.style.display || btnVolver.style.display === 'none')) { 
-            capaNacional.eachLayer(layer => capaNacional.resetStyle(layer)); 
-            actualizarProgresoGlobal(); 
-        } else if (capaProvincias) { 
-            capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); 
-            actualizarProgresoDepartamental(tituloDepartamento.innerText.trim().toUpperCase()); 
-        }
+// =========================================
+// 6. FILTROS Y NAVEGACIÓN
+// =========================================
+document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(btn => { btn.onclick = () => { document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); }; });
+window.cerrarFiltros = () => { pantallaFiltros.style.transform = ''; pantallaFiltros.classList.remove('activo'); setTimeout(() => { pantallaFiltros.style.display = 'none'; fondoDashboard.style.display = 'none'; }, 400); };
+if (btnFiltro) { btnFiltro.onclick = () => { fondoDashboard.style.display = 'block'; pantallaFiltros.style.display = 'block'; setTimeout(() => { pantallaFiltros.classList.add('activo'); }, 10); }; }
+if (btnCerrarFiltros) btnCerrarFiltros.onclick = window.cerrarFiltros;
+habilitarSwipeToClose('#pantalla-filtros', window.cerrarFiltros);
 
-        if (modoConstelacionActivo) {
-            btnConstelacion.click();
-            setTimeout(() => btnConstelacion.click(), 10);
-        }
-    };
-}
+if (btnLimpiarFiltros) { btnLimpiarFiltros.onclick = () => { document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(b => b.classList.remove('seleccionado')); document.querySelector('#filtro-categoria .btn-opcion[data-valor="TODOS"]').classList.add('seleccionado'); inputFiltroInicio.value=''; inputFiltroFin.value=''; filtroActualMundo='TODOS'; filtroFechaInicio=null; filtroFechaFin=null; btnFiltro.innerText=iconosFiltro['TODOS']; btnFiltro.style.textShadow=""; mostrarToast("Filtros limpios"); refrescarMundoLocal(); window.cerrarFiltros(); }; }
+if (btnAplicarFiltros) { btnAplicarFiltros.onclick = () => { const cat = document.querySelector('#filtro-categoria .btn-opcion.seleccionado'); filtroActualMundo = cat ? cat.dataset.valor : 'TODOS'; filtroFechaInicio = inputFiltroInicio.value||null; filtroFechaFin = inputFiltroFin.value||null; btnFiltro.innerText = iconosFiltro[filtroActualMundo]||'🌍'; btnFiltro.style.textShadow = filtroActualMundo!=='TODOS'||filtroFechaInicio||filtroFechaFin ? "0 0 15px #00FFFF" : ""; mostrarToast("Filtros aplicados"); refrescarMundoLocal(); window.cerrarFiltros(); }; }
 
-if (btnConstelacion) {
-    btnConstelacion.onclick = () => {
-        if (modoConstelacionActivo) {
-            mapa.removeLayer(capaConstelacion);
-            modoConstelacionActivo = false;
-            btnConstelacion.style.boxShadow = "0 0 10px #9400D3";
-            return;
-        }
+function refrescarMundoLocal() { if(capaNacional && btnVolver.style.display==='none'){ capaNacional.eachLayer(l=>capaNacional.resetStyle(l)); actualizarProgresoGlobal(); } else if(capaProvincias){ capaProvincias.eachLayer(l=>capaProvincias.resetStyle(l)); actualizarProgresoDepartamental(tituloDepartamento.innerText.trim().toUpperCase()); } }
 
-        capaConstelacion.clearLayers();
-        let todosLosViajes = [];
-        
-        Object.keys(datosViajes).forEach(prov => {
-            datosViajes[prov].forEach(viaje => {
-                const vTipo = viaje.tipo || 'PERSONAL';
-                if (viaje.fecha && (filtroActualMundo === 'TODOS' || vTipo === filtroActualMundo)) {
-                    todosLosViajes.push({ ...viaje, provinciaReal: prov });
-                }
-            });
-        });
-
-        todosLosViajes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-
-        let puntosRuta = [];
-        todosLosViajes.forEach((v, index) => {
-            let centro = diccCentrosProvincias[v.provinciaReal];
-            if (centro) {
-                puntosRuta.push(centro);
-                L.circleMarker(centro, { radius: 4, color: '#FFF', weight: 1, fillColor: '#FFD700', fillOpacity: 1, className: 'punto-ruta' })
-                  .bindTooltip(`Parada ${index + 1}: ${v.nombre} (${v.fecha})`, { direction: 'top' })
-                  .addTo(capaConstelacion);
-            }
-        });
-
-        if (puntosRuta.length > 1) {
-            let linea = L.polyline(puntosRuta, { className: 'linea-constelacion' });
-            capaConstelacion.addLayer(linea);
-            mapa.addLayer(capaConstelacion);
-            mapa.fitBounds(linea.getBounds(), { padding: [50, 50] });
-            modoConstelacionActivo = true;
-            btnConstelacion.style.boxShadow = "0 0 20px #FFF, 0 0 30px #00FFFF";
-        } else {
-            const mensaje = filtroActualMundo === 'TODOS' ? 
-                "⚠️ Necesitas registrar al menos 2 expediciones con fecha." : 
-                `⚠️ No tienes suficientes expediciones del tipo ${filtroActualMundo} con fecha.`;
-            alert(mensaje);
-        }
-    };
-}
-
-function calcularRachaActiva() {
-    const fechasSet = new Set();
-    Object.values(datosViajes).forEach(provincia => {
-        provincia.forEach(viaje => {
-            if (viaje.fecha) {
-                const [anio, mes] = viaje.fecha.split('-'); 
-                if (anio && mes) fechasSet.add(`${anio}-${mes}`);
-            }
-        });
-    });
-
-    if (fechasSet.size === 0) return 0;
-
-    const mesesOrdenados = Array.from(fechasSet).sort((a, b) => b.localeCompare(a));
-    let rachaActual = 0;
-    const fechaActual = new Date();
-    const mesActualStr = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}`;
-    const fechaMesAnterior = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - 1, 1);
-    const mesAnteriorStr = `${fechaMesAnterior.getFullYear()}-${String(fechaMesAnterior.getMonth() + 1).padStart(2, '0')}`;
-
-    if (!fechasSet.has(mesActualStr) && !fechasSet.has(mesAnteriorStr)) return 0; 
-
-    let añoMesEvaluado = mesesOrdenados[0]; 
-    let [añoEval, mesEval] = añoMesEvaluado.split('-').map(Number);
-
-    for (let i = 0; i < mesesOrdenados.length; i++) {
-        const mesEnCiclo = mesesOrdenados[i];
-        const mesEsperadoStr = `${añoEval}-${String(mesEval).padStart(2, '0')}`;
-
-        if (mesEnCiclo === mesEsperadoStr) {
-            rachaActual++; mesEval--; 
-            if (mesEval === 0) { mesEval = 12; añoEval--; }
-        } else break; 
-    }
-    return rachaActual;
+function calcRacha() {
+    const fSet = new Set(); Object.values(datosViajes).forEach(p => p.forEach(v => { if(v.fecha && pasaFiltros(v) && v.estado!=='WISHLIST') { const [a, m]=v.fecha.split('-'); if(a&&m) fSet.add(`${a}-${m}`); }}));
+    if(fSet.size===0) return 0; const mo = Array.from(fSet).sort((a,b)=>b.localeCompare(a)); let r=0; const hoy=new Date();
+    const mA=`${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`; const fA=new Date(hoy.getFullYear(), hoy.getMonth()-1, 1); const mAnt=`${fA.getFullYear()}-${String(fA.getMonth()+1).padStart(2,'0')}`;
+    if(!fSet.has(mA) && !fSet.has(mAnt)) return 0;
+    let [aE, mE] = mo[0].split('-').map(Number);
+    for(let i=0; i<mo.length; i++){ if(mo[i]===`${aE}-${String(mE).padStart(2,'0')}`){ r++; mE--; if(mE===0){mE=12; aE--;} } else break; } return r;
 }
 
 if (btnDashboard) {
     btnDashboard.onclick = () => {
-        let totProyectos = 0; let totPersonales = 0; let platosDestacados = 0; let provVisitadas = new Set(); let estadios = [];
-        
-        Object.keys(datosViajes).forEach(prov => {
-            datosViajes[prov].forEach(viaje => {
-                provVisitadas.add(prov);
-                if (viaje.tipo === 'TRABAJO') totProyectos++; 
-                else if (viaje.tipo === 'FUTBOL') { if(viaje.estadio) estadios.push(viaje.estadio); }
-                else totPersonales++;
-                if (viaje.platoDestacado) platosDestacados++;
-            });
+        let tP=0; let tPer=0; let tot=0; let pVis=new Set(); let est=[];
+        Object.keys(datosViajes).forEach(prov => { datosViajes[prov].forEach(v => { if(pasaFiltros(v) && v.estado!=='WISHLIST') { pVis.add(prov); tot++; if(v.tipo==='TRABAJO') tP++; else if(v.tipo==='FUTBOL'){if(v.estadio) est.push(v.estadio);} else tPer++; } }); });
+        const totP = datosProvinciasGenerales ? datosProvinciasGenerales.features.length : 196; const porc = Math.round((pVis.size/totP)*100)||0; const racha = calcRacha();
+        contenidoDashboard.innerHTML = `<div class="bento-item bento-full" style="border-color:#00FFFF;"><div class="bento-titulo" style="color:#00FFFF;">Avance</div><div class="bento-valor" style="color:#00FFFF;">${porc}%</div><div style="font-size:0.75rem; color:#ddd;">Conquistado: ${pVis.size}/196 prov</div></div><div class="bento-item" style="border-color:#FFD700; border-left:4px solid #FFD700;"><div class="bento-titulo">Racha Activa</div><div class="bento-valor" style="color:#FFD700;">${racha} ${racha>0?'🔥':'🧊'}</div></div><div class="bento-item" style="border-color:#FF4500; border-left:4px solid #FF4500;"><div class="bento-titulo">Proyectos</div><div class="bento-valor" style="color:#FF4500;">${tP} 🚜</div></div><div class="bento-item" style="border-color:#00FA9A; border-left:4px solid #00FA9A;"><div class="bento-titulo">Personales</div><div class="bento-valor" style="color:#00FA9A;">${tPer} 🍹</div></div><div class="bento-item" style="border-color:#FF1493; border-left:4px solid #FF1493;"><div class="bento-titulo">Registros</div><div class="bento-valor" style="color:#FF1493;">${tot} 📍</div></div><div class="bento-item bento-full" style="border-color:#FFF;"><div class="bento-titulo">Estadios</div><div class="bento-valor" style="color:#FFF;">${est.length} ⚽</div><div style="font-size:0.75rem; color:#ddd;">${est.join(', ')||'Aún no hay canchas.'}</div></div>`;
+        fondoDashboard.style.display = 'block'; pantallaDashboard.style.display = 'block'; setTimeout(() => pantallaDashboard.classList.add('activo'), 10);
+    };
+}
+
+// =========================================
+// RULETA DE FIN DE SEMANA
+// =========================================
+if(btnRuleta) {
+    btnRuleta.onclick = () => {
+        if(!datosProvinciasGenerales) return;
+        let candidatas = [];
+        datosProvinciasGenerales.features.forEach(p => {
+            let nP = p.properties.NOMBPROV.trim().toUpperCase();
+            let hasVisita = false;
+            if(datosViajes[nP]) hasVisita = datosViajes[nP].some(v => (v.estado||'VISITADO') === 'VISITADO');
+            if(!hasVisita) candidatas.push(nP);
         });
-
-        const totProvinciasPais = datosProvinciasGenerales ? datosProvinciasGenerales.features.length : 196;
-        const porcExplorado = Math.round((provVisitadas.size / totProvinciasPais) * 100) || 0;
-        const mesesRacha = calcularRachaActiva();
-        const iconoFuego = mesesRacha > 0 ? '🔥' : '🧊';
-
-        contenidoDashboard.innerHTML = `
-            <div class="bento-item bento-full" style="border-color: #00FFFF;">
-                <div class="bento-titulo">Avance Nacional</div>
-                <div class="bento-valor" style="font-size: 3rem; color: #00FFFF;">${porcExplorado}%</div>
-                <div style="font-size: 0.8rem; color: #ddd;">Has conquistado ${provVisitadas.size} provincias de 196</div>
-            </div>
-            <div class="bento-item" style="border-color: #FFD700; border-left: 4px solid #FFD700;">
-                <div class="bento-titulo">Racha Activa</div>
-                <div class="bento-valor" style="color: #FFD700;">${mesesRacha} ${iconoFuego}</div>
-                <div style="font-size: 0.65rem; color: #aaa;">Meses consecutivos explorando</div>
-            </div>
-            <div class="bento-item" style="border-color: #FF4500; border-left: 4px solid #FF4500;">
-                <div class="bento-titulo">Proyectos</div>
-                <div class="bento-valor" style="color: #FF4500;">${totProyectos} 🚜</div>
-            </div>
-            <div class="bento-item" style="border-color: #00FA9A; border-left: 4px solid #00FA9A;">
-                <div class="bento-titulo">V. Personales</div>
-                <div class="bento-valor" style="color: #00FA9A;">${totPersonales} 🍹</div>
-            </div>
-            <div class="bento-item bento-full" style="border-color: #FFF; background: rgba(255,255,255,0.1);">
-                <div class="bento-titulo">Salón de la Fama - Estadios</div>
-                <div class="bento-valor" style="color: #FFF;">${estadios.length} ⚽</div>
-                <div style="font-size: 0.8rem; color: #ddd;">${estadios.length > 0 ? estadios.join(', ') : 'Aún no has registrado canchas.'}</div>
-            </div>
-        `;
-        fondoDashboard.style.display = 'block'; pantallaDashboard.style.display = 'block';
-        setTimeout(() => { pantallaDashboard.classList.add('activo'); }, 10);
-    };
-}
-
-if (btnCerrarDashboard) {
-    btnCerrarDashboard.onclick = () => {
-        pantallaDashboard.classList.remove('activo');
-        setTimeout(() => { pantallaDashboard.style.display = 'none'; fondoDashboard.style.display = 'none'; }, 400);
-    };
-}
-
-// 6. RESPALDO Y RESTAURACIÓN LOCAL
-if (btnBackup) {
-    btnBackup.onclick = () => {
-        if (Object.keys(datosViajes).length === 0) return alert("⚠️ La bitácora está vacía. No hay expediciones para respaldar.");
-        const dataStr = JSON.stringify(datosViajes, null, 2);
-        const blob = new Blob([dataStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `PeruGo_Respaldo_${new Date().toISOString().split('T')[0]}.json`; 
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a); URL.revokeObjectURL(url);
-        alert("✅ Copia de seguridad asegurada en tu dispositivo.");
-    };
-}
-
-if (btnImportar && inputImportar) {
-    btnImportar.onclick = () => inputImportar.click();
-    inputImportar.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        if (!confirm("⚠️ ¿Restaurar copia? Esto fusionará/sobreescribirá datos actuales en la nube.")) { inputImportar.value = ''; return; }
-
-        const reader = new FileReader();
-        reader.onload = async (evento) => {
-            try {
-                const jsonRestaurado = JSON.parse(evento.target.result);
-                btnImportar.innerText = "⏳ Restaurando..."; btnImportar.disabled = true;
-                let promesas = [];
-
-                Object.keys(jsonRestaurado).forEach(provincia => {
-                    jsonRestaurado[provincia].forEach(viaje => {
-                        const refDoc = doc(db, "viajes", viaje.id);
-                        const dataAsubir = { ...viaje }; delete dataAsubir.id; 
-                        promesas.push(setDoc(refDoc, dataAsubir));
-                    });
-                });
-                await Promise.all(promesas);
-                alert("✅ Bitácora restaurada. La aplicación se reiniciará."); window.location.reload();
-            } catch (error) {
-                alert("❌ Error al procesar el archivo."); console.error(error);
-                btnImportar.innerText = "📂 Restaurar Copia Local"; btnImportar.disabled = false;
-            }
-        };
-        reader.readAsText(file);
-    };
-}
-
-// 7. BUSCADOR
-if (btnBuscar) {
-    btnBuscar.onclick = () => {
-        pantallaBuscador.style.display = 'flex';
-        setTimeout(() => pantallaBuscador.style.opacity = '1', 10);
-        inputBuscador.focus();
-    };
-}
-
-window.cerrarBuscador = () => {
-    pantallaBuscador.style.opacity = '0';
-    setTimeout(() => { pantallaBuscador.style.display = 'none'; inputBuscador.value = ''; resultadosBuscador.innerHTML = ''; }, 300);
-};
-
-if (inputBuscador) {
-    inputBuscador.addEventListener('input', (e) => {
-        clearTimeout(temporizadorBuscador);
-        const texto = e.target.value.toLowerCase().trim();
-        if (texto.length < 2) { resultadosBuscador.innerHTML = ''; return; }
         
-        temporizadorBuscador = setTimeout(() => {
-            let htmlResultados = ''; let contador = 0;
-            Object.keys(datosViajes).forEach(provincia => {
-                datosViajes[provincia].forEach(viaje => {
-                    const nombre = viaje.nombre ? viaje.nombre.toLowerCase() : '';
-                    const info = viaje.info ? viaje.info.toLowerCase() : '';
-                    const estadio = viaje.estadio ? viaje.estadio.toLowerCase() : '';
-                    const proyecto = viaje.tipoProyecto ? viaje.tipoProyecto.toLowerCase() : '';
-                    const plato = viaje.platoDestacado ? viaje.platoDestacado.toLowerCase() : '';
-                    const prov = provincia.toLowerCase();
-                    
-                    if (nombre.includes(texto) || info.includes(texto) || estadio.includes(texto) || proyecto.includes(texto) || plato.includes(texto) || prov.includes(texto)) {
-                        const depFeature = datosProvinciasGenerales.features.find(p => p.properties.NOMBPROV.trim().toUpperCase() === provincia);
-                        const nombreDep = depFeature ? depFeature.properties.FIRST_NOMB : 'Desconocido';
-                        
-                        htmlResultados += `
-                            <div class="resultado-item" onclick="volarAProvincia('${provincia}', '${nombreDep}')">
-                                <h4>${viaje.nombre} <span style="font-size: 0.75rem; color: #FFD700;">(${provincia})</span></h4>
-                                <p>${viaje.tipo === 'TRABAJO' ? '🚜' : viaje.tipo === 'FUTBOL' ? '⚽' : '🍹'} ${viaje.tipo} - ${viaje.fecha || 'Sin fecha'}</p>
-                            </div>`;
-                        contador++;
-                    }
-                });
-            });
-            if (contador === 0) htmlResultados = '<p style="color:#aaa; text-align:center; margin-top:30px;">No se encontraron coincidencias.</p>';
-            resultadosBuscador.innerHTML = htmlResultados;
-        }, 300);
-    });
-}
-
-window.volarAProvincia = (nombreProvincia, nombreDepartamento) => {
-    cerrarBuscador();
-    
-    const menuFlotante = document.getElementById('contenedor-menu-flotante');
-    if (menuFlotante) menuFlotante.style.display = 'none'; 
-    
-    if (capaProvincias) mapa.removeLayer(capaProvincias); capaNacional.eachLayer(layer => capaNacional.resetStyle(layer)); 
-    
-    const filtradas = { type: "FeatureCollection", features: datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepartamento.trim().toUpperCase()) };
-    capaProvincias = L.geoJSON(filtradas, {
-        style: function(fProv) {
-            const provLimpia = fProv.properties.NOMBPROV.trim().toUpperCase();
-            const c = coloresChichaPremium[fProv.properties.NOMBPROV.length % coloresChichaPremium.length];
-            let tieneVisita = datosViajes[provLimpia] && datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo).length > 0;
-            return tieneVisita ? { color: c, weight: 3, fillColor: c, fillOpacity: 0.35, className: 'poligono-vidrio' } : { color: c, weight: 1, fillColor: "#000", fillOpacity: 0.4, dashArray: "4 5" };
-        },
-        onEachFeature: function(fP, lP) {
-            const nProv = fP.properties.NOMBPROV;
-            const c = coloresChichaPremium[nProv.length % coloresChichaPremium.length];
-            lP.bindTooltip(`<span style="color: ${c};">${nProv}</span>`, { permanent: true, direction: 'center', className: 'etiqueta-provincia', interactive: false });
-            lP.on('click', () => { 
-                abrirInformacionProvincia(nProv, c); 
-            });
-        }
-    }).addTo(mapa);
-    
-    mapa.fitBounds(L.geoJSON(filtradas).getBounds()); mapa.removeLayer(capaNacional);
-    tituloMapa.style.display = 'none'; tituloDepartamento.innerText = nombreDepartamento; tituloDepartamento.style.display = 'block'; btnVolver.style.display = 'flex'; actualizarProgresoDepartamental(nombreDepartamento.trim().toUpperCase());
-    
-    const colorProv = coloresChichaPremium[nombreProvincia.length % coloresChichaPremium.length];
-    abrirInformacionProvincia(nombreProvincia, colorProv);
-};
-
-// 8. LÓGICA DE CRUD Y FORMULARIO
-function abrirInformacionProvincia(nombreOriginal, colorProvincia) {
-    const nombreLimpio = nombreOriginal.trim().toUpperCase();
-    tituloInfoProvincia.innerText = nombreOriginal; tarjetaContenidoInfo.style.borderColor = colorProvincia; tarjetaContenidoInfo.style.boxShadow = `0 0 20px ${colorProvincia}`; tituloInfoProvincia.style.webkitTextFillColor = colorProvincia; 
-    limpiarFormulario(); renderizarLugares(nombreLimpio, colorProvincia); pantallaInfo.style.display = 'flex';
-}
-
-function renderizarLugares(nombreLimpio, colorProvincia) {
-    contenedorLugares.innerHTML = ''; 
-    let lugares = datosViajes[nombreLimpio] || [];
-    lugares = lugares.filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo);
-    if (lugares.length === 0) return insertarTarjetaLugarSegura(`<div class="lugar-card" style="border-left-color: #FF4500; padding:15px;"><h3>📍 Zona por explorar</h3><p>No hay registros aquí.</p></div>`);
-
-    lugares.forEach(lugar => {
-        let htmlFotos = '';
-        
-        if (lugar.foto1 || lugar.foto2) {
-            htmlFotos = `<div style="display: flex; gap: 4%; margin-top: 15px; justify-content: center;">`;
-            if(lugar.foto1) htmlFotos += `<img src="${lugar.foto1}" style="width: 48%; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #00FFFF; cursor: pointer; box-shadow: 0 0 10px rgba(0,255,255,0.2);" onclick="abrirVisorFotos('${lugar.foto1}')">`;
-            if(lugar.foto2) htmlFotos += `<img src="${lugar.foto2}" style="width: 48%; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #00FFFF; cursor: pointer; box-shadow: 0 0 10px rgba(0,255,255,0.2);" onclick="abrirVisorFotos('${lugar.foto2}')">`;
-            htmlFotos += `</div>`;
-        }
-
-        const vTipo = lugar.tipo || 'PERSONAL'; const vCompania = lugar.compania || 'Solo';
-        let tagTipo = vTipo === 'TRABAJO' ? '<span class="tag-info tag-trabajo">🚜 Trabajo</span>' : vTipo === 'FUTBOL' ? '<span class="tag-info tag-futbol">⚽ Fútbol</span>' : '<span class="tag-info tag-personal">🍹 Personal</span>';
-        const tagCompania = `<span class="tag-info tag-compania">${vCompania}</span>`;
-        const btnEnlace = lugar.link ? `<br><a href="${lugar.link}" target="_blank" class="btn-link">🔗 Docs/Media</a>` : '';
-        const btnEditar = `<button class="btn-editar" onclick="event.stopPropagation(); prepararEdicion('${lugar.id}', '${nombreLimpio}')">✏️</button>`;
-        const btnEliminar = `<button class="btn-eliminar" onclick="event.stopPropagation(); eliminarRegistro('${lugar.id}', '${nombreLimpio}')">🗑️</button>`;
-        const genStars = (num) => '★'.repeat(num) + '<span style="color:#444;">' + '★'.repeat(5-num) + '</span>';
-        let detallesEspecificos = '';
-
-        if (vTipo === 'TRABAJO') {
-            const climaIcon = lugar.clima ? `<span style="font-size:1.2rem;">${lugar.clima}</span>` : '';
-            const proy = lugar.tipoProyecto ? `<strong>Proyecto:</strong> ${lugar.tipoProyecto}<br>` : '';
-            const emp = lugar.empresa ? `<strong>Contratista:</strong> <span style="color:#FFD700;">${genStars(lugar.empresa)}</span><br>` : '';
-            detallesEspecificos = `<p style="font-size:0.85rem;">${proy}${emp} ${climaIcon}</p>`;
-        } else if (vTipo === 'FUTBOL') {
-            const est = lugar.estadio ? `<strong>Estadio:</strong> ${lugar.estadio}<br>` : '';
-            const par = lugar.partido ? `<strong>Partido:</strong> ${lugar.partido}<br>` : '';
-            const amb = lugar.ambiente ? `<strong>Ambiente:</strong> <span style="color:#FFD700;">${genStars(lugar.ambiente)}</span>` : '';
-            detallesEspecificos = `<p style="font-size:0.85rem;">${est}${par}${amb}</p>`;
+        if(candidatas.length > 0) {
+            const elegida = candidatas[Math.floor(Math.random() * candidatas.length)];
+            mostrarToast(`🎲 Destino al azar: ¡Tu misión es conquistar ${elegida}!`, 'success');
         } else {
-            const transIcon = lugar.transporte ? `<span style="font-size:1.2rem;">${lugar.transporte}</span>` : '';
-            const plato = lugar.platoDestacado ? `<strong>Plato:</strong> ${lugar.platoDestacado}<br>` : '';
-            const gas = lugar.gastro ? `<strong>Gastronomía:</strong> <span style="color:#FFD700;">${genStars(lugar.gastro)}</span><br>` : '';
-            const hos = lugar.hosp ? `<strong>Hospedaje:</strong> <span style="color:#FFD700;">${genStars(lugar.hosp)}</span><br>` : '';
-            const atr = lugar.atrac ? `<strong>Atractivos:</strong> <span style="color:#FFD700;">${genStars(lugar.atrac)}</span>` : '';
-            detallesEspecificos = `<p style="font-size:0.85rem;">${plato}${gas}${hos}${atr} <br>${transIcon}</p>`;
+            mostrarToast("¡Impresionante! Ya visitaste todas las provincias de Perú.", 'success');
         }
-
-        insertarTarjetaLugarSegura(`
-            <div class="lugar-card" style="border-left-color: ${colorProvincia}">
-                <div class="tarjeta-header" onclick="toggleAcordeon('${lugar.id}')">
-                    <h3>${lugar.nombre}</h3><div class="flecha-acordeon" id="flecha-${lugar.id}">▼</div>
-                </div>
-                <div class="tarjeta-body" id="body-${lugar.id}">
-                    ${btnEditar}${btnEliminar}
-                    <div style="margin-bottom: 5px;">${tagTipo} ${tagCompania}</div>
-                    <p><strong>Fecha:</strong> ${lugar.fecha || ''}</p>
-                    ${detallesEspecificos}
-                    <p style="color: #bbb; margin-top: 8px;"><em>${lugar.info}</em></p>
-                    ${btnEnlace}${htmlFotos}
-                </div>
-            </div>`);
-    });
+    };
 }
 
-window.prepararEdicion = (idDocumento, provinciaLimpia) => {
-    const viaje = datosViajes[provinciaLimpia].find(v => v.id === idDocumento);
-    if(!viaje) return;
-    idEdicionActual = idDocumento; resetUIFormulario();
-    document.getElementById('nuevo-tipo').value = viaje.tipo || 'PERSONAL'; selectTipo.dispatchEvent(new Event('change'));
-    document.getElementById('nueva-compania').value = viaje.compania || 'Solo'; document.getElementById('nuevo-nombre').value = viaje.nombre || '';
-    document.getElementById('nueva-fecha').value = viaje.fecha || ''; document.getElementById('nueva-info').value = viaje.info || ''; document.getElementById('nuevo-link').value = viaje.link || '';
+if(btnWrapped) {
+    btnWrapped.onclick = () => {
+        let y = new Date().getFullYear(); let tr=0; let pe=0; let fu=0; let provs=new Set();
+        Object.keys(datosViajes).forEach(p => datosViajes[p].forEach(v => { if(v.fecha && v.fecha.startsWith(y) && v.estado!=='WISHLIST'){ provs.add(p); if(v.tipo==='TRABAJO') tr++; else if(v.tipo==='FUTBOL') fu++; else pe++; } }));
+        let topT = [tr,pe,fu]; let maxIdx = topT.indexOf(Math.max(...topT)); let aura = maxIdx===0 ? '🚜 Topógrafo Guerrero' : maxIdx===1 ? '🍹 Aventurero Libre' : '⚽ Hincha Fiel';
+        document.getElementById('wrapped-content').innerHTML = `Este ${y} fue increíble:<br><br><span style="color:#00FFFF; font-size:1.5rem; font-weight:bold;">${provs.size}</span> Provincias descubiertas<br><br><span style="color:#FFD700; font-size:1.5rem; font-weight:bold;">${tr+pe+fu}</span> Expediciones totales<br><br>Tu aura de viaje:<br><span style="color:#FF1493; font-size:1.5rem; font-family:'Paytone One';">${aura}</span>`;
+        document.getElementById('modal-wrapped').style.display='flex'; setTimeout(()=>document.getElementById('modal-wrapped').style.opacity='1', 10);
+        if(typeof confetti==='function') confetti({particleCount:150, spread:100, zIndex:10060});
+    };
+}
+
+window.cerrarDashboard = () => { pantallaDashboard.style.transform = ''; pantallaDashboard.classList.remove('activo'); setTimeout(() => { pantallaDashboard.style.display = 'none'; fondoDashboard.style.display = 'none'; }, 400); };
+if(btnCerrarDashboard) btnCerrarDashboard.onclick = window.cerrarDashboard;
+if(fondoDashboard) fondoDashboard.onclick = () => { window.cerrarDashboard(); window.cerrarFiltros(); }; 
+habilitarSwipeToClose('.dashboard-bento', window.cerrarDashboard); habilitarSwipeToClose('.info-contenido', () => { if(btnCerrarInfo) btnCerrarInfo.click(); }); habilitarSwipeToClose('#visor-fotos', () => { if(window.cerrarVisorFotos) window.cerrarVisorFotos(); });
+
+// =========================================
+// 7. GENERADOR POSTAL INSTAGRAM
+// =========================================
+window.generarPostalIG = async (id, prov) => {
+    mostrarToast("Generando Postal...", "success");
+    const v = datosViajes[prov].find(x => x.id === id); if(!v) return;
+    document.getElementById('post-titulo').innerText = v.nombre;
+    document.getElementById('post-sub').innerText = prov;
+    document.getElementById('post-img').src = v.foto1 || v.foto2 || './assets/img/fondo.jpg'; 
+    document.getElementById('post-desc').innerText = v.tipo === 'TRABAJO' ? `Proyecto finalizado. ${v.clima||''}` : v.tipo === 'FUTBOL' ? `Estadio: ${v.estadio||''}` : `Puntaje Gastro: ★ ${v.gastro||'N/A'}`;
+    const panel = document.getElementById('postal-generador');
+    try {
+        const canvas = await html2canvas(panel, {scale: 1, useCORS: true, logging: false});
+        const url = canvas.toDataURL("image/jpeg", 0.9);
+        const a = document.createElement('a'); a.href = url; a.download = `PeruGo_Story_${v.nombre}.jpg`; a.click();
+        mostrarToast("Postal descargada para Instagram 📸", "success");
+    } catch(e) { mostrarToast("Error generando postal", "error"); }
+};
+
+// =========================================
+// 8. CRUD Y GEOLOCALIZACIÓN Z
+// =========================================
+document.getElementById('btn-gps').onclick = (e) => {
+    e.preventDefault(); const btn = document.getElementById('btn-gps'); btn.innerText = "⏳";
+    if(!navigator.geolocation){ mostrarToast("Sin GPS", "error"); btn.innerText="🎯"; return; }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        tempLat=pos.coords.latitude; tempLng=pos.coords.longitude; document.getElementById('nueva-coordenada').value = `${tempLat.toFixed(6)}, ${tempLng.toFixed(6)}`;
+        if(pos.coords.accuracy>10){ mostrarToast(`Precisión baja (${Math.round(pos.coords.accuracy)}m)`,"error"); btn.style.color="#FF4500"; } else { btn.style.color="#00FA9A"; }
+        try { 
+            const r = await fetch(`https://api.opentopodata.org/v1/srtm30m?locations=${tempLat},${tempLng}`); const d = await r.json();
+            if(d && d.results && d.results[0].elevation) { document.getElementById('nueva-altitud').value = Math.round(d.results[0].elevation); mostrarToast("Cota altimétrica Z obtenida ⛰️","success"); }
+        } catch(e){}
+        btn.innerText = "🎯"; capaPinTemporal.clearLayers(); L.marker([tempLat,tempLng], {icon: L.divIcon({className:'chinche-premium',html:'📍',iconSize:[28,28],iconAnchor:[14,28]})}).addTo(capaPinTemporal);
+    }, (err) => { mostrarToast("Error GPS", "error"); btn.innerText="🎯"; }, {enableHighAccuracy:true, timeout:10000});
+};
+
+document.getElementById('btn-ubicar-mapa').onclick = (e) => { e.preventDefault(); pantallaInfo.style.display='none'; seleccionandoUbicacion=true; markerDraggable=null; document.getElementById('btn-confirmar-ubicacion').style.display='block'; mostrarToast("Toca y arrastra el chinche 📌", "success"); };
+document.getElementById('btn-confirmar-ubicacion').onclick = () => { if(tempLat && tempLng) document.getElementById('nueva-coordenada').value=`${tempLat.toFixed(6)}, ${tempLng.toFixed(6)}`; seleccionandoUbicacion=false; markerDraggable=null; document.getElementById('btn-confirmar-ubicacion').style.display='none'; pantallaInfo.style.display='flex'; };
+
+function dibujarPinesProvincia(nom) {
+    capaPinesProvincia.clearLayers(); const lg = datosViajes[nom]||[];
+    lg.forEach(v => { if(pasaFiltros(v) && v.lat && v.lng) L.marker([v.lat, v.lng], {icon: L.divIcon({className:'chinche-premium',html:v.estado==='WISHLIST'?'⭐':'📍',iconSize:[28,28],iconAnchor:[14,28]})}).bindTooltip(`<b>${v.nombre}</b><br><span style="font-size:0.7rem;color:#aaa;">Z: ${v.altitud?v.altitud+'m':'N/A'}</span>`, {direction:'top',className:'tooltip-chinche'}).addTo(capaPinesProvincia); });
+}
+
+function abrirInformacionProvincia(nomOri, col) {
+    const nomL = nomOri.trim().toUpperCase(); tituloInfoProvincia.innerText=nomOri; tarjetaContenidoInfo.style.borderColor=col; tarjetaContenidoInfo.style.boxShadow=`0 0 20px ${col}`; tituloInfoProvincia.style.webkitTextFillColor=col;
+    limpiarFormulario(); mostrarSkeletonLoading(); dibujarPinesProvincia(nomL);
     
-    if(viaje.tipo === 'TRABAJO') {
-        if(viaje.tipoProyecto) document.getElementById('nuevo-tipo-proyecto').value = viaje.tipoProyecto;
-        if(viaje.clima) document.querySelector(`#selector-clima .btn-opcion[data-valor="${viaje.clima}"]`)?.click();
-        if(viaje.empresa) document.querySelectorAll('#estrellas-empresa span')[viaje.empresa-1]?.click();
-    } else if(viaje.tipo === 'FUTBOL') {
-        if(viaje.estadio) document.getElementById('nuevo-estadio').value = viaje.estadio;
-        if(viaje.partido) document.getElementById('nuevo-partido').value = viaje.partido;
-        if(viaje.ambiente) document.querySelectorAll('#estrellas-ambiente span')[viaje.ambiente-1]?.click();
-    } else {
-        if(viaje.platoDestacado) document.getElementById('nuevo-plato').value = viaje.platoDestacado;
-        if(viaje.transporte) document.querySelector(`#selector-transporte .btn-opcion[data-valor="${viaje.transporte}"]`)?.click();
-        if(viaje.gastro) document.querySelectorAll('#estrellas-gastro span')[viaje.gastro-1]?.click();
-        if(viaje.hosp) document.querySelectorAll('#estrellas-hosp span')[viaje.hosp-1]?.click();
-        if(viaje.atrac) document.querySelectorAll('#estrellas-atrac span')[viaje.atrac-1]?.click();
-    }
-    btnGuardarRegistro.innerHTML = '🔄 Actualizar Registro'; btnGuardarRegistro.style.background = 'linear-gradient(90deg, #FFD700, #FF4500)';
-    btnCancelarEdicion.style.display = 'block'; formRegistro.style.display = 'block'; formRegistro.scrollIntoView({ behavior: "smooth" });
-};
+    // CALCULAR RANGO DE "ALCALDE"
+    let numVisitas = 0;
+    if(datosViajes[nomL]) numVisitas = datosViajes[nomL].filter(v => (v.estado||'VISITADO') === 'VISITADO').length;
+    let txtRango = "Aún no explorado";
+    if (numVisitas >= 10) txtRango = "👑 Alcalde";
+    else if (numVisitas >= 5) txtRango = "☕ Caserito";
+    else if (numVisitas >= 3) txtRango = "🤝 Conocido";
+    else if (numVisitas >= 1) txtRango = "🎒 Forastero";
+    
+    if (rangoProvincia) rangoProvincia.innerText = txtRango;
 
-function limpiarFormulario() {
-    idEdicionActual = null; resetUIFormulario();
-    document.getElementById('nuevo-nombre').value = ''; document.getElementById('nueva-fecha').value = ''; document.getElementById('nueva-info').value = ''; 
-    document.getElementById('nuevo-link').value = ''; document.getElementById('nuevo-plato').value = ''; document.getElementById('nuevo-estadio').value = ''; 
-    document.getElementById('nuevo-partido').value = ''; document.getElementById('foto-1').value = ''; document.getElementById('foto-2').value = '';
-    selectTipo.value = 'PERSONAL'; selectTipo.dispatchEvent(new Event('change'));
-    btnGuardarRegistro.innerHTML = '💾 Guardar en la Nube'; btnGuardarRegistro.style.background = 'linear-gradient(90deg, #00FFFF, #00FA9A)';
-    btnCancelarEdicion.style.display = 'none'; formRegistro.style.display = 'none';
+    // SELLO DIGITAL 
+    const sC = document.getElementById('contenedor-sello'); sC.innerHTML = '';
+    if(numVisitas > 0) sC.innerHTML = `<div class="sello-pasaporte">VISITADO</div>`;
+
+    pantallaInfo.style.display='flex'; tarjetaContenidoInfo.style.transform=''; setTimeout(()=>renderizarLugares(nomL,col), 800);
 }
 
-if (btnCancelarEdicion) btnCancelarEdicion.onclick = limpiarFormulario;
-window.eliminarRegistro = async (idDocumento, provinciaLimpia) => {
-    if (!confirm("⚠️ ¿Eliminar esta expedición?")) return;
-    try { await deleteDoc(doc(db, "viajes", idDocumento)); datosViajes[provinciaLimpia] = datosViajes[provinciaLimpia].filter(v => v.id !== idDocumento);
-        renderizarLugares(provinciaLimpia, tituloInfoProvincia.style.webkitTextFillColor);
-        if(capaProvincias) capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); actualizarProgresoGlobal();
-    } catch(e) { alert("Error: " + e.message); }
-};
-
-if (btnMostrarFormulario) btnMostrarFormulario.onclick = () => { if(formRegistro.style.display === 'block' && idEdicionActual) limpiarFormulario(); else formRegistro.style.display = formRegistro.style.display === 'none' ? 'block' : 'none'; };
-
-if (btnGuardarRegistro) {
-    btnGuardarRegistro.onclick = async () => {
-        const tipo = document.getElementById('nuevo-tipo').value; const compania = document.getElementById('nueva-compania').value;
-        const nombre = document.getElementById('nuevo-nombre').value; const fecha = document.getElementById('nueva-fecha').value;
-        const info = document.getElementById('nueva-info').value; const link = document.getElementById('nuevo-link').value;
-        const foto1 = document.getElementById('foto-1').files[0]; const foto2 = document.getElementById('foto-2').files[0];
-
-        if (!nombre) return alert("El nombre es obligatorio.");
-        btnGuardarRegistro.disabled = true; mensajeCarga.style.display = 'block';
-
-        try {
-            const provinciaActual = tituloInfoProvincia.innerText.trim().toUpperCase();
-            let url1 = "", url2 = ""; let viajePrevio = null;
-
-            if (idEdicionActual) { viajePrevio = datosViajes[provinciaActual].find(v => v.id === idEdicionActual); url1 = viajePrevio.foto1 || ""; url2 = viajePrevio.foto2 || ""; }
-            if (foto1) url1 = await subirFotoImgBB(foto1); if (foto2) url2 = await subirFotoImgBB(foto2);
-
-            let registroData = { provincia: provinciaActual, tipo, compania, nombre, fecha, info, link, foto1: url1, foto2: url2 };
-            if (tipo === 'TRABAJO') { registroData.tipoProyecto = document.getElementById('nuevo-tipo-proyecto').value; registroData.clima = seleccionClima; registroData.empresa = estrellasValor.empresa; } 
-            else if (tipo === 'FUTBOL') { registroData.estadio = document.getElementById('nuevo-estadio').value; registroData.partido = document.getElementById('nuevo-partido').value; registroData.ambiente = estrellasValor.ambiente; } 
-            else { registroData.transporte = seleccionTransporte; registroData.platoDestacado = document.getElementById('nuevo-plato').value; registroData.gastro = estrellasValor.gastro; registroData.hosp = estrellasValor.hosp; registroData.atrac = estrellasValor.atrac; }
-
-            if (idEdicionActual) { await updateDoc(doc(db, "viajes", idEdicionActual), registroData); const index = datosViajes[provinciaActual].findIndex(v => v.id === idEdicionActual); datosViajes[provinciaActual][index] = { id: idEdicionActual, ...registroData }; } 
-            else { const docRef = await addDoc(collection(db, "viajes"), registroData); registroData.id = docRef.id; if (!datosViajes[provinciaActual]) datosViajes[provinciaActual] = []; datosViajes[provinciaActual].push(registroData); }
-            
-            renderizarLugares(provinciaActual, tituloInfoProvincia.style.webkitTextFillColor);
-            if(capaProvincias) capaProvincias.eachLayer(layer => capaProvincias.resetStyle(layer)); actualizarProgresoGlobal(); limpiarFormulario(); 
-        } catch (error) { alert("Error al guardar: " + error.message); }
-        btnGuardarRegistro.disabled = false; mensajeCarga.style.display = 'none';
-    };
-}
-
-if (btnCerrarInfo) {
-    btnCerrarInfo.onclick = () => { 
-        pantallaInfo.style.display = 'none'; 
-    };
-}
-
-if (btnVolver) {
-    btnVolver.onclick = () => {
-        if (capaProvincias) mapa.removeLayer(capaProvincias); capaNacional.eachLayer(layer => capaNacional.resetStyle(layer)); capaNacional.addTo(mapa);
-        mapa.setView([-9.5, -75.01], 5.0); tituloDepartamento.style.display = 'none'; 
+function renderizarLugares(nomL, col) {
+    contenedorLugares.innerHTML = ''; let lug = (datosViajes[nomL]||[]).filter(pasaFiltros);
+    if(lug.length===0) return insertarTarjetaLugarSegura(`<div class="lugar-card" style="border-left-color: #FF4500; padding:15px;"><h3>📍 Zona por explorar</h3></div>`);
+    lug.forEach(v => {
+        let fH = ''; if(v.foto1||v.foto2) fH = `<div style="display:flex;gap:4%;margin-top:15px;justify-content:center;">${v.foto1?`<img src="${v.foto1}" class="foto-viaje" onclick="abrirVisorFotos('${v.foto1}')">`:''}${v.foto2?`<img src="${v.foto2}" class="foto-viaje" onclick="abrirVisorFotos('${v.foto2}')">`:''}</div>`;
+        const est = v.estado || 'VISITADO'; const tT = est==='WISHLIST' ? '<span class="tag-info tag-wishlist">⭐ Wishlist</span>' : v.tipo==='TRABAJO'?'<span class="tag-info tag-trabajo">🚜 Trabajo</span>':v.tipo==='FUTBOL'?'<span class="tag-info tag-futbol">⚽ Fútbol</span>':'<span class="tag-info tag-personal">🍹 Personal</span>';
+        const eD = `<button class="btn-editar" onclick="event.stopPropagation(); prepararEdicion('${v.id}','${nomL}')">✏️</button><button class="btn-eliminar" onclick="event.stopPropagation(); eliminarRegistro('${v.id}','${nomL}')">🗑️</button>`;
+        const s = (n)=>'★'.repeat(n||0)+'<span style="color:rgba(255,255,255,0.2);">'+'★'.repeat(5-(n||0))+'</span>';
+        let det = ''; if(v.tipo==='TRABAJO') det=`<p style="font-size:0.8rem;">${v.tipoProyecto?`<b>Proy:</b> ${v.tipoProyecto}<br>`:''}<b>Contratista:</b> <span style="color:#FFD700;">${s(v.empresa)}</span> ${v.clima||''}</p>`; else if(v.tipo==='FUTBOL') det=`<p style="font-size:0.8rem;">${v.estadio?`<b>Estadio:</b> ${v.estadio}<br>`:''}<b>Ambiente:</b> <span style="color:#FFD700;">${s(v.ambiente)}</span></p>`; else det=`<p style="font-size:0.8rem;">${v.platoDestacado?`<b>Plato:</b> ${v.platoDestacado}<br>`:''}<b>Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span><br><b>Hospedaje:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${v.transporte||''}</p>`;
+        if(v.contacto) det += `<p style="font-size:0.75rem; color:#00FFFF;">📞 <b>Directorio:</b> ${v.contacto}</p>`;
         
-        tituloMapa.style.display = 'block'; 
-        const menuFlotante = document.getElementById('contenedor-menu-flotante');
-        if (menuFlotante) menuFlotante.style.display = 'flex'; 
-
-        btnVolver.style.display = 'none'; actualizarProgresoGlobal(); 
-    };
-}
-
-function actualizarProgresoGlobal() {
-    if (!datosProvinciasGenerales) return; let visitados = 0;
-    datosProvinciasGenerales.features.forEach(p => {
-        let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
-        if (datosViajes[provLimpia]) { const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo); if(filtrados.length > 0) visitados++; }
+        insertarTarjetaLugarSegura(`<div class="lugar-card" style="border-left-color:${col}"><div class="tarjeta-header" onclick="toggleAcordeon('${v.id}')"><h3>${v.nombre}</h3><div class="flecha-acordeon" id="flecha-${v.id}">▼</div></div><div class="tarjeta-body" id="body-${v.id}">${eD}<div style="margin-bottom:5px;">${tT} <span class="tag-info tag-compania">${v.compania||'Solo'}</span></div><p><b>Fecha:</b> ${v.fecha||''} ${v.altitud ? `| <b>Z:</b> ${v.altitud}m` : ''}</p>${det}<p style="color:#aaa;margin-top:8px;"><em>${v.info||''}</em></p>${v.link?`<a href="${v.link}" target="_blank" class="btn-link">🔗 Docs</a>`:''} ${est==='VISITADO' && (v.foto1||v.foto2) ? `<button class="btn-postal" onclick="generarPostalIG('${v.id}','${nomL}')">📸 IG Story</button>` : ''} ${fH}</div></div>`);
     });
-    let porc = Math.round((visitados / datosProvinciasGenerales.features.length) * 100); if (visitados > 0 && porc === 0) porc = 1; 
-    barraRelleno.style.width = porc + '%'; textoProgreso.innerText = porc + '%'; mascotaProgreso.style.left = porc + '%';
 }
 
-function actualizarProgresoDepartamental(nombreDepLimpio) {
-    const provsDelDep = datosProvinciasGenerales.features.filter(p => p.properties.FIRST_NOMB.trim().toUpperCase() === nombreDepLimpio); let visitados = 0;
-    provsDelDep.forEach(p => {
-        let provLimpia = p.properties.NOMBPROV.trim().toUpperCase();
-        if (datosViajes[provLimpia]) { const filtrados = datosViajes[provLimpia].filter(v => filtroActualMundo === 'TODOS' || (v.tipo || 'PERSONAL') === filtroActualMundo); if(filtrados.length > 0) visitados++; }
-    });
-    let porc = provsDelDep.length === 0 ? 0 : Math.round((visitados / provsDelDep.length) * 100); if (visitados > 0 && porc === 0) porc = 1; 
-    barraRelleno.style.width = porc + '%'; mascotaProgreso.style.left = porc + '%';
-
-    if (porc === 100) {
-        barraRelleno.style.background = 'linear-gradient(90deg, #FFD700, #FFF, #FFD700)'; textoProgreso.innerText = '¡DOMINADO!'; textoProgreso.classList.add('texto-conquista');
-        setTimeout(() => { if (typeof confetti === 'function') confetti({ particleCount: 250, spread: 120, origin: { y: 0.5 }, colors: ['#FFD700', '#FF1493', '#00FFFF', '#FFFFFF'], zIndex: 10005 }); }, 300);
-    } else { barraRelleno.style.background = 'linear-gradient(90deg, #FF1493, #00FA9A, #FFD700)'; textoProgreso.innerText = porc + '%'; textoProgreso.classList.remove('texto-conquista'); }
+function limpiarFormulario() { 
+    idEdicionActual=null; 
+    resetUIFormulario(); 
+    ['nuevo-nombre','nueva-fecha','nueva-info','nuevo-link','nuevo-plato','nuevo-estadio','nuevo-partido','foto-1','foto-2','nueva-coordenada','nueva-altitud','nuevo-contacto'].forEach(i => {
+        const el = document.getElementById(i);
+        if (el) el.value = '';
+    }); 
+    const sTipo = document.getElementById('nuevo-tipo');
+    if (sTipo) { sTipo.value = 'PERSONAL'; sTipo.dispatchEvent(new Event('change')); }
+    tempLat=null; tempLng=null; markerDraggable=null; 
+    if (capaPinTemporal) capaPinTemporal.clearLayers(); 
+    if (btnGuardarRegistro) btnGuardarRegistro.innerHTML='💾 Guardar'; 
+    if (btnCancelarEdicion) btnCancelarEdicion.style.display='none'; 
+    if (formRegistro) formRegistro.style.display='none'; 
 }
 
-// 9. SESIÓN Y AUTENTICACIÓN
-if (btnIngresar) {
-    btnIngresar.onclick = async () => {
-        const emailValor = inputEmail.value.trim(); const passValor = inputPass.value;
-        if (!emailValor || !passValor) return avatarGuia.src = './assets/img/mascota-triste.webp';
-        avatarGuia.src = './assets/img/mascota-explora.webp'; 
+window.prepararEdicion = (id, pL) => {
+    const v = datosViajes[pL].find(x => x.id === id); if(!v) return; idEdicionActual = id; limpiarFormulario();
+    document.getElementById('nuevo-estado').value=v.estado||'VISITADO'; document.getElementById('nuevo-tipo').value=v.tipo||'PERSONAL'; document.getElementById('nuevo-tipo').dispatchEvent(new Event('change')); document.getElementById('nueva-compania').value=v.compania||'Solo'; document.getElementById('nuevo-nombre').value=v.nombre||''; document.getElementById('nueva-fecha').value=v.fecha||''; document.getElementById('nueva-info').value=v.info||''; document.getElementById('nueva-altitud').value=v.altitud||''; document.getElementById('nuevo-contacto').value=v.contacto||'';
+    const elLink = document.getElementById('nuevo-link'); if(elLink) elLink.value = v.link || '';
+    tempLat=v.lat||null; tempLng=v.lng||null; document.getElementById('nueva-coordenada').value=tempLat?`${tempLat.toFixed(6)}, ${tempLng.toFixed(6)}`:''; capaPinTemporal.clearLayers(); if(tempLat) L.marker([tempLat,tempLng],{icon:L.divIcon({className:'chinche-premium',html:'📍',iconSize:[28,28],iconAnchor:[14,28]})}).addTo(capaPinTemporal);
+    if(v.tipo==='TRABAJO'){ if(v.tipoProyecto) document.getElementById('nuevo-tipo-proyecto').value=v.tipoProyecto; if(v.clima) document.querySelector(`#selector-clima .btn-opcion[data-valor="${v.clima}"]`)?.click(); if(v.empresa) document.querySelectorAll('#estrellas-empresa span')[v.empresa-1]?.click(); } else if(v.tipo==='FUTBOL'){ if(v.estadio) document.getElementById('nuevo-estadio').value=v.estadio; if(v.partido) document.getElementById('nuevo-partido').value=v.partido; if(v.ambiente) document.querySelectorAll('#estrellas-ambiente span')[v.ambiente-1]?.click(); } else { if(v.platoDestacado) document.getElementById('nuevo-plato').value=v.platoDestacado; if(v.transporte) document.querySelector(`#selector-transporte .btn-opcion[data-valor="${v.transporte}"]`)?.click(); if(v.gastro) document.querySelectorAll('#estrellas-gastro span')[v.gastro-1]?.click(); if(v.hosp) document.querySelectorAll('#estrellas-hosp span')[v.hosp-1]?.click(); if(v.atrac) document.querySelectorAll('#estrellas-atrac span')[v.atrac-1]?.click(); }
+    btnGuardarRegistro.innerHTML='🔄 Actualizar'; btnCancelarEdicion.style.display='block'; formRegistro.style.display='block'; formRegistro.scrollIntoView({behavior:"smooth"});
+};
+
+if(btnCancelarEdicion) btnCancelarEdicion.onclick = limpiarFormulario;
+window.eliminarRegistro = async (id, pL) => { if(!confirm("⚠️ ¿Eliminar permanentemente?")) return; try { await deleteDoc(doc(db, "viajes", id)); datosViajes[pL]=datosViajes[pL].filter(v=>v.id!==id); renderizarLugares(pL, tituloInfoProvincia.style.webkitTextFillColor); dibujarPinesProvincia(pL); if(capaProvincias) capaProvincias.eachLayer(l=>capaProvincias.resetStyle(l)); actualizarProgresoGlobal(); mostrarToast("Eliminado", "success"); } catch(e){} };
+if(btnMostrarFormulario) btnMostrarFormulario.onclick = () => { if(formRegistro.style.display==='block'&&idEdicionActual) limpiarFormulario(); else formRegistro.style.display=formRegistro.style.display==='none'?'block':'none'; };
+
+if(btnGuardarRegistro) {
+    btnGuardarRegistro.onclick = async () => {
+        const est=document.getElementById('nuevo-estado').value; const tp=document.getElementById('nuevo-tipo').value; const co=document.getElementById('nueva-compania').value; const nom=document.getElementById('nuevo-nombre').value; const fec=document.getElementById('nueva-fecha').value; const inf=document.getElementById('nueva-info').value; const cont=document.getElementById('nuevo-contacto').value; const alt=document.getElementById('nueva-altitud').value; const f1=document.getElementById('foto-1').files[0]; const f2=document.getElementById('foto-2').files[0];
+        const elLink = document.getElementById('nuevo-link'); const lin = elLink ? elLink.value : '';
+
+        if(!nom) return mostrarToast("Nombre obligatorio", "error"); btnGuardarRegistro.disabled=true; mensajeCarga.style.display='block';
         try {
-            await signInWithEmailAndPassword(auth, emailValor, passValor); avatarGuia.src = './assets/img/mascota-feliz.webp';
-            setTimeout(() => { pantallaAcceso.style.opacity = '0'; setTimeout(() => { pantallaAcceso.style.display = 'none'; pantallaCarga.style.display = 'flex'; contenedorMapa.style.display = 'block'; tituloMapa.style.display = 'block'; contenedorProgreso.style.display = 'block'; reproducirMusicaAleatoria(); inicializarMapa(); }, 800); }, 600);
-        } catch (error) { console.error("Error de acceso:", error.message); avatarGuia.src = './assets/img/mascota-triste.webp'; inputPass.value = ''; setTimeout(() => { if (inputPass.value.length === 0) avatarGuia.src = './assets/img/mascota-hola.webp'; }, 2000); }
+            const pA=tituloInfoProvincia.innerText.trim().toUpperCase(); let u1="", u2=""; if(idEdicionActual){ const vP=datosViajes[pA].find(v=>v.id===idEdicionActual); u1=vP.foto1||""; u2=vP.foto2||""; }
+            
+            let esPrimeraVisita = false;
+            if (est === 'VISITADO' && !idEdicionActual) {
+                if (!datosViajes[pA] || !datosViajes[pA].some(v => (v.estado||'VISITADO') === 'VISITADO')) {
+                    esPrimeraVisita = true;
+                }
+            }
+
+            if(f1) u1 = await comprimirYSubirImagen(f1); if(f2) u2 = await comprimirYSubirImagen(f2);
+            const cM = document.getElementById('nueva-coordenada').value.trim(); if(cM){ const p=cM.split(','); if(p.length===2){ tempLat=parseFloat(p[0]); tempLng=parseFloat(p[1]); } }
+            let rD = { provincia:pA, estado:est, tipo:tp, compania:co, nombre:nom, fecha:fec, info:inf, link:lin, contacto:cont, altitud:alt, foto1:u1, foto2:u2, lat:tempLat, lng:tempLng };
+            if(tp==='TRABAJO'){ rD.tipoProyecto=document.getElementById('nuevo-tipo-proyecto').value; rD.clima=seleccionClima; rD.empresa=estrellasValor.empresa; } else if(tp==='FUTBOL'){ rD.estadio=document.getElementById('nuevo-estadio').value; rD.partido=document.getElementById('nuevo-partido').value; rD.ambiente=estrellasValor.ambiente; } else { rD.transporte=seleccionTransporte; rD.platoDestacado=document.getElementById('nuevo-plato').value; rD.gastro=estrellasValor.gastro; rD.hosp=estrellasValor.hosp; rD.atrac=estrellasValor.atrac; }
+            if(idEdicionActual){ await updateDoc(doc(db,"viajes",idEdicionActual), rD); const idx=datosViajes[pA].findIndex(v=>v.id===idEdicionActual); datosViajes[pA][idx]={id:idEdicionActual,...rD}; mostrarToast("Actualizado"); } else { const dR=await addDoc(collection(db,"viajes"), rD); rD.id=dR.id; if(!datosViajes[pA]) datosViajes[pA]=[]; datosViajes[pA].push(rD); mostrarToast("Guardado"); }
+            
+            if (esPrimeraVisita) {
+                const retoRandom = desafiosNomadas[Math.floor(Math.random() * desafiosNomadas.length)];
+                setTimeout(() => mostrarToast(`¡Nueva provincia! Reto Nómada: ${retoRandom}`, 'success'), 3500);
+            }
+
+            let numVisitas = datosViajes[pA].filter(v => (v.estado||'VISITADO') === 'VISITADO').length;
+            let txtRango = "Aún no explorado";
+            if (numVisitas >= 10) txtRango = "👑 Alcalde"; else if (numVisitas >= 5) txtRango = "☕ Caserito"; else if (numVisitas >= 3) txtRango = "🤝 Conocido"; else if (numVisitas >= 1) txtRango = "🎒 Forastero";
+            if (rangoProvincia) rangoProvincia.innerText = txtRango;
+
+            renderizarLugares(pA, tituloInfoProvincia.style.webkitTextFillColor); dibujarPinesProvincia(pA);
+            const sC=document.getElementById('contenedor-sello'); if(numVisitas > 0) sC.innerHTML = `<div class="sello-pasaporte">VISITADO</div>`;
+            if(capaProvincias) capaProvincias.eachLayer(l=>capaProvincias.resetStyle(l)); actualizarProgresoGlobal(); limpiarFormulario(); 
+        } catch(e){} btnGuardarRegistro.disabled=false; mensajeCarga.style.display='none';
     };
 }
-inputPass.addEventListener('input', () => { avatarGuia.src = inputPass.value.length > 0 ? './assets/img/mascota-explora.webp' : './assets/img/mascota-hola.webp'; });
-btnMute.onclick = () => { audioAmbiental.muted = !audioAmbiental.muted; btnMute.textContent = audioAmbiental.muted ? '🔇' : '🔊'; };
 
-const btnActualizar = document.getElementById('btn-actualizar-app');
-if (btnActualizar) btnActualizar.onclick = () => { btnActualizar.innerText = "⏳..."; if ('caches' in window) { caches.keys().then((names) => { Promise.all(names.map(name => caches.delete(name))).then(() => { window.location.reload(true); }); }); } else window.location.reload(true); };
-if(btnCerrarSesion) btnCerrarSesion.onclick = async () => { await signOut(auth); if (typeof cerrarDashboard === 'function') cerrarDashboard(); };
+if(btnCerrarInfo) btnCerrarInfo.onclick = () => pantallaInfo.style.display='none';
+if(btnVolver) btnVolver.onclick = () => { if(capaProvincias) mapa.removeLayer(capaProvincias); capaNacional.eachLayer(l=>capaNacional.resetStyle(l)); capaNacional.addTo(mapa); mapa.setView([-9.5, -75.01], 5.0); tituloDepartamento.style.display='none'; tituloMapa.style.display='block'; btnVolver.style.display='none'; capaPinesProvincia.clearLayers(); capaPinTemporal.clearLayers(); actualizarProgresoGlobal(); };
 
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        pantallaAcceso.style.display = 'none'; pantallaCarga.style.display = 'flex'; contenedorMapa.style.display = 'block'; tituloMapa.style.display = 'block'; contenedorProgreso.style.display = 'block';
-        inicializarMapa(); reproducirMusicaAleatoria();
-        document.body.addEventListener('click', () => { if (audioAmbiental.paused) audioAmbiental.play().catch(() => {}); }, { once: true }); 
-    } else { pantallaAcceso.style.display = 'flex'; pantallaAcceso.style.opacity = '1'; contenedorMapa.style.display = 'none'; tituloMapa.style.display = 'none'; contenedorProgreso.style.display = 'none'; }
+function actualizarProgresoGlobal() { if(!datosProvinciasGenerales) return; let vis=0; datosProvinciasGenerales.features.forEach(p=>{ let pl=p.properties.NOMBPROV.trim().toUpperCase(); if(datosViajes[pl]){ const f=datosViajes[pl].filter(pasaFiltros); if(f.some(v=>(v.estado||'VISITADO')==='VISITADO')) vis++; } }); let por=Math.round((vis/datosProvinciasGenerales.features.length)*100); if(vis>0&&por===0)por=1; barraRelleno.style.width=por+'%'; textoProgreso.innerText=por+'%'; mascotaProgreso.style.left=por+'%'; }
+function actualizarProgresoDepartamental(nD) { const pr=datosProvinciasGenerales.features.filter(p=>p.properties.FIRST_NOMB.trim().toUpperCase()===nD); let vis=0; pr.forEach(p=>{ let pl=p.properties.NOMBPROV.trim().toUpperCase(); if(datosViajes[pl]){ const f=datosViajes[pl].filter(pasaFiltros); if(f.some(v=>(v.estado||'VISITADO')==='VISITADO')) vis++; } }); let por=pr.length===0?0:Math.round((vis/pr.length)*100); if(vis>0&&por===0)por=1; barraRelleno.style.width=por+'%'; mascotaProgreso.style.left=por+'%'; if(por===100){ barraRelleno.style.background='linear-gradient(90deg,#FFD700,#FFF,#FFD700)'; textoProgreso.innerText='¡DOMINADO!'; if(typeof confetti==='function') confetti({particleCount:250,spread:120,origin:{y:0.5},zIndex:10005}); } else { barraRelleno.style.background='linear-gradient(90deg,#FF1493,#00FA9A,#FFD700)'; textoProgreso.innerText=por+'%'; } }
+
+// 9. RESPALDOS, BUSCADOR Y SESIÓN
+if(btnBackup) btnBackup.onclick = () => { const blob=new Blob([JSON.stringify(datosViajes,null,2)],{type:"application/json"}); const u=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=u; a.download=`PeruGo_${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
+if(btnImportar&&inputImportar) { btnImportar.onclick=()=>inputImportar.click(); inputImportar.onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; if(!confirm("⚠️ Restaurar fusionará datos.")) return; const r=new FileReader(); r.onload=async(ev)=>{ try{ const js=JSON.parse(ev.target.result); let p=[]; Object.keys(js).forEach(pr=>js[pr].forEach(v=>{ const rd=doc(db,"viajes",v.id); const d={...v}; delete d.id; p.push(setDoc(rd,d)); })); await Promise.all(p); window.location.reload(); }catch(err){} }; r.readAsText(f); }; }
+
+if(btnBuscar) btnBuscar.onclick = () => { pantallaBuscador.style.display='flex'; setTimeout(()=>pantallaBuscador.style.opacity='1',10); inputBuscador.focus(); };
+window.cerrarBuscador = () => { pantallaBuscador.style.opacity='0'; setTimeout(()=>{ pantallaBuscador.style.display='none'; inputBuscador.value=''; resultadosBuscador.innerHTML=''; },300); };
+if(inputBuscador) inputBuscador.addEventListener('input', (e) => { clearTimeout(temporizadorBuscador); const tx=e.target.value.toLowerCase().trim(); if(tx.length<2){ resultadosBuscador.innerHTML=''; return; } temporizadorBuscador=setTimeout(()=>{ let h=''; let c=0; Object.keys(datosViajes).forEach(p=>datosViajes[p].forEach(v=>{ const sr=`${v.nombre||''} ${v.info||''} ${p}`.toLowerCase(); if(sr.includes(tx)){ const dF=datosProvinciasGenerales.features.find(x=>x.properties.NOMBPROV.trim().toUpperCase()===p); const nD=dF?dF.properties.FIRST_NOMB:''; h+=`<div class="resultado-item" onclick="volarAProvincia('${p}','${nD}')"><h4>${v.nombre} <span style="color:#FFD700;">(${p})</span></h4><p>${v.fecha||''}</p></div>`; c++; } })); resultadosBuscador.innerHTML=c===0?'<p>No se encontraron.</p>':h; }, 300); });
+window.volarAProvincia = (nP, nD) => { cerrarBuscador(); const f={type:"FeatureCollection",features:datosProvinciasGenerales.features.filter(p=>p.properties.FIRST_NOMB.trim().toUpperCase()===nD.trim().toUpperCase())}; if(capaProvincias) mapa.removeLayer(capaProvincias); capaNacional.eachLayer(l=>capaNacional.resetStyle(l)); capaProvincias=L.geoJSON(f,{style:function(fP){ const nPr=fP.properties.NOMBPROV.trim().toUpperCase(); const c=coloresChichaPremium[nPr.length%coloresChichaPremium.length]; let hV=false;let hW=false; if(datosViajes[nPr]){ const fil=datosViajes[nPr].filter(pasaFiltros); hV=fil.some(v=>(v.estado||'VISITADO')==='VISITADO'); hW=fil.some(v=>v.estado==='WISHLIST'); } if(hV) return {color:c,weight:3,fillColor:c,fillOpacity:0.35,className:'poligono-vidrio'}; else if(hW) return {color:"#00FFFF",weight:2,fillColor:"#00FFFF",fillOpacity:0.15,className:'poligono-wishlist'}; else return {color:"#444",weight:1,fillColor:"#111",fillOpacity:0.7,className:'poligono-raspadita'}; }, onEachFeature:function(fP,lP){ const nPr=fP.properties.NOMBPROV; const c=coloresChichaPremium[nPr.length%coloresChichaPremium.length]; lP.bindTooltip(`<span style="color:${c};">${nPr}</span>`,{permanent:true,direction:'center',className:'etiqueta-provincia',interactive:false}); lP.on('click',()=>abrirInformacionProvincia(nPr,c)); } }).addTo(mapa); mapa.fitBounds(L.geoJSON(f).getBounds()); mapa.removeLayer(capaNacional); tituloMapa.style.display='none'; tituloDepartamento.innerText=nD; tituloDepartamento.style.display='block'; btnVolver.style.display='inline-block'; actualizarProgresoDepartamental(nD.trim().toUpperCase()); abrirInformacionProvincia(nP, coloresChichaPremium[nP.length%coloresChichaPremium.length]); };
+
+// 10. CONTROLADORES PRINCIPALES DE SESIÓN
+if(btnIngresar) btnIngresar.onclick = async () => { if(audioAmbiental.paused){ audioAmbiental.play().catch(()=>{}); audioAmbiental.pause(); } const em=inputEmail.value.trim(); const pw=inputPass.value; if(!em||!pw) return avatarGuia.src='./assets/img/mascota-triste.webp'; try { await signInWithEmailAndPassword(auth, em, pw); avatarGuia.src='./assets/img/mascota-feliz.webp'; setTimeout(()=>{ pantallaAcceso.style.opacity='0'; setTimeout(()=>{ pantallaAcceso.style.display='none'; pantallaCarga.style.display='flex'; contenedorMapa.style.display='block'; tituloMapa.style.display='block'; contenedorProgreso.style.display='block'; reproducirMusicaAleatoria(); inicializarMapa(); },800); },600); } catch(e){ avatarGuia.src='./assets/img/mascota-triste.webp'; inputPass.value=''; } };
+btnMute.onclick = () => { if(audioAmbiental.paused) audioAmbiental.play().catch(()=>{}); audioAmbiental.muted=!audioAmbiental.muted; btnMute.textContent=audioAmbiental.muted?'🔇':'🔊'; };
+const btnActualizar=document.getElementById('btn-actualizar-app'); if(btnActualizar) btnActualizar.onclick=()=>{ if('caches' in window){ caches.keys().then(ns=>Promise.all(ns.map(n=>caches.delete(n))).then(()=>window.location.reload(true))); }else window.location.reload(true); };
+if(btnCerrarSesion) btnCerrarSesion.onclick=async()=>{ await signOut(auth); window.location.reload(); };
+
+onAuthStateChanged(auth, (u) => {
+    if(u) { pantallaAcceso.style.display='none'; pantallaCarga.style.display='flex'; contenedorMapa.style.display='block'; tituloMapa.style.display='block'; contenedorProgreso.style.display='block'; inicializarMapa(); if(!audioAmbiental.src) reproducirMusicaAleatoria(); document.body.addEventListener('click', ()=>{ if(audioAmbiental.paused&&!audioAmbiental.muted) audioAmbiental.play().catch(()=>{}); }, {once:true}); } else { pantallaAcceso.style.display='flex'; pantallaAcceso.style.opacity='1'; contenedorMapa.style.display='none'; tituloMapa.style.display='none'; contenedorProgreso.style.display='none'; }
 });
 
-// 10. UI Y FORMULARIO (EVENTOS FINALES)
-window.toggleAcordeon = (idDocumento) => {
-    const body = document.getElementById(`body-${idDocumento}`); const flecha = document.getElementById(`flecha-${idDocumento}`);
-    if (body && flecha) { body.classList.toggle('abierto'); flecha.classList.toggle('rotada'); }
-};
-
-if (selectTipo) {
-    selectTipo.addEventListener('change', (e) => {
-        camposTrabajo.style.display = 'none'; camposPersonal.style.display = 'none'; camposFutbol.style.display = 'none';
-        if (e.target.value === 'TRABAJO') camposTrabajo.style.display = 'block'; else if (e.target.value === 'FUTBOL') camposFutbol.style.display = 'block'; else camposPersonal.style.display = 'block';
-    });
-}
-
-// 11. VISOR DE FOTOS NATIVO (LIGHTBOX)
-window.abrirVisorFotos = (urlUrl) => {
-    const visor = document.getElementById('visor-fotos');
-    const imgVisor = document.getElementById('img-visor');
-    if (visor && imgVisor) {
-        imgVisor.src = urlUrl;
-        visor.style.display = 'flex';
-        setTimeout(() => visor.style.opacity = '1', 10);
-    }
-};
-
-window.cerrarVisorFotos = () => {
-    const visor = document.getElementById('visor-fotos');
-    const imgVisor = document.getElementById('img-visor');
-    if (visor && imgVisor) {
-        visor.style.opacity = '0';
-        setTimeout(() => {
-            visor.style.display = 'none';
-            imgVisor.src = ''; 
-        }, 300);
-    }
-};
+window.toggleAcordeon=(id)=>{ const b=document.getElementById(`body-${id}`); const f=document.getElementById(`flecha-${id}`); if(b&&f){ b.classList.toggle('abierto'); f.classList.toggle('rotada'); } };
+if(selectTipo) selectTipo.addEventListener('change', (e)=>{ camposTrabajo.style.display='none'; camposPersonal.style.display='none'; camposFutbol.style.display='none'; if(e.target.value==='TRABAJO') camposTrabajo.style.display='block'; else if(e.target.value==='FUTBOL') camposFutbol.style.display='block'; else camposPersonal.style.display='block'; });
+window.abrirVisorFotos=(u)=>{ const v=document.getElementById('visor-fotos'); const i=document.getElementById('img-visor'); if(v&&i){ i.src=u; v.style.display='flex'; v.style.transform=''; setTimeout(()=>v.style.opacity='1',10); } };
+window.cerrarVisorFotos=()=>{ const v=document.getElementById('visor-fotos'); const i=document.getElementById('img-visor'); if(v&&i){ v.style.opacity='0'; setTimeout(()=>{ v.style.display='none'; i.src=''; },300); } };

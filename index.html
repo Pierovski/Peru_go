@@ -3,211 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Perú Go - v2.4</title>
-    <link rel="manifest" href="manifest.json?v=7">
+    <title>Perú Go - Premium</title>
+    <link rel="manifest" href="manifest.json?v=10">
     <meta name="theme-color" content="#0a1118">
     <link rel="apple-touch-icon" href="./icono-192.png">
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=7">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Paytone+One&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=17">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Paytone+One&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-    <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer; font-family: 'Montserrat', sans-serif;">actualizar</button>
+    <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer;">actualizar</button>
     
+    <div id="toast-container"></div>
     <div id="pantalla-acceso">
         <div class="acceso-flotante">
             <img src="./assets/img/mascota-hola.webp" id="avatar-guia" alt="Guía">
             <p class="instruccion">Acceso a la Expedición</p>
-            <div class="input-wrapper" style="margin-bottom: 15px;">
-                <input type="email" id="email" placeholder="tu@correo.com" style="width: 100%; background: transparent; border: none; color: white; text-align: center; font-size: 1rem; outline: none;">
-            </div>
-            <div class="input-wrapper">
-                <input type="password" id="pass" placeholder="••••">
-            </div>
+            <div class="input-wrapper" style="margin-bottom: 15px;"><input type="email" id="email" placeholder="tu@correo.com" class="input-transparente"></div>
+            <div class="input-wrapper"><input type="password" id="pass" placeholder="••••" class="input-transparente"></div>
             <button id="btn-ingresar">Entrar</button>
         </div>
     </div>
 
-    <div id="pantalla-carga" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: #0a1118; z-index: 10005; flex-direction: column; justify-content: center; align-items: center;">
-        <img src="./assets/img/mascota-explora.webp" alt="Cargando" style="width: 100px; margin-bottom: 20px; animation: flotar 2s infinite ease-in-out;">
-        <div class="spinner-chicha"></div>
-        <p class="instruccion" style="margin-top: 15px; font-size: 0.9rem;">Sincronizando Base de Datos...</p>
-    </div>
+    <div id="pantalla-carga" class="pantalla-full"><img src="./assets/img/mascota-explora.webp" alt="Cargando" class="img-flotante"><div class="spinner-chicha"></div><p class="instruccion" style="margin-top: 15px;">Sincronizando...</p></div>
 
-    <div id="pantalla-buscador" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10,17,24,0.98); z-index: 10005; flex-direction: column; align-items: center; padding-top: 50px; opacity: 0; transition: opacity 0.3s ease;">
-        <button onclick="cerrarBuscador()" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: #00FFFF; font-size: 2rem; cursor: pointer; font-weight: bold;">✖</button>
-        <h2 class="titulo-chicha" style="color: #FF1493; font-size: 1.5rem; margin-bottom: 20px;">BUSCADOR DE EXPEDICIONES</h2>
-        <input type="text" id="input-buscador" class="input-chicha" placeholder="Lugar, obra, estadio, ciudad..." style="width: 85%; max-width: 400px; font-size: 1.1rem; border-color: #00FFFF; text-align: center;">
+    <div id="pantalla-buscador" class="pantalla-full glass-modal" style="display: none; opacity: 0; padding-top: 50px;">
+        <button onclick="cerrarBuscador()" class="btn-cerrar-esquina">✖</button>
+        <h2 class="titulo-chicha" style="color: #FF1493;">BUSCADOR</h2>
+        <input type="text" id="input-buscador" class="input-chicha" placeholder="Lugar, obra, estadio..." style="width: 85%; max-width: 400px; text-align: center;">
         <div id="resultados-buscador" style="width: 85%; max-width: 400px; margin-top: 20px; overflow-y: auto; max-height: 65vh;"></div>
     </div>
 
-    <div id="fondo-dashboard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999;"></div>
+    <div id="fondo-dashboard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.7); z-index: 9999;"></div>
     
+    <div id="pantalla-filtros" class="dashboard-bento">
+        <div class="swipe-indicador"></div><button id="btn-cerrar-filtros" class="btn-cerrar-esquina-bento">✖</button>
+        <h2 class="titulo-chicha" style="color: #00FFFF; font-size: 1.2rem;">FILTROS & RUTA DEL SABOR</h2>
+        <div class="botonera-opciones" id="filtro-categoria" style="justify-content: center; margin-bottom: 15px;">
+            <div class="btn-opcion seleccionado" data-valor="TODOS">🌍 Todos</div><div class="btn-opcion" data-valor="TRABAJO">🚜 Trabajo</div>
+            <div class="btn-opcion" data-valor="PERSONAL">🍹 Personal</div><div class="btn-opcion" data-valor="FUTBOL">⚽ Fútbol</div>
+            <div class="btn-opcion" data-valor="SABOR" style="border-color:#FFD700; color:#FFD700;">🍜 Ruta Sabor</div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-bottom: 25px;"><input type="date" id="filtro-fecha-inicio" class="input-chicha"><input type="date" id="filtro-fecha-fin" class="input-chicha"></div>
+        <div style="display: flex; gap: 10px;"><button id="btn-limpiar-filtros" class="btn-chicha btn-peligro">Limpiar</button><button id="btn-aplicar-filtros" class="btn-chicha">Aplicar</button></div>
+    </div>
+
     <div id="pantalla-dashboard" class="dashboard-bento">
-        <div class="indicador-deslizador"></div>
-        <button id="btn-cerrar-dashboard" style="position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 50%; width: 35px; height: 35px; color: white; font-weight: bold; cursor: pointer;">✖</button>
-        <h2 class="titulo-chicha" style="color: #00FFFF; text-align: center; margin-bottom: 25px; font-size: 1.5rem;">CENTRO DE MANDO</h2>
-        
+        <div class="swipe-indicador"></div>
+        <button id="btn-ruleta" class="btn-chicha" style="background: linear-gradient(90deg, #FF4500, #FFD700); color:black; margin-bottom: 10px;">🎲 Ruleta de Aventuras</button>
+        <button id="btn-wrapped" class="btn-chicha" style="background: linear-gradient(90deg, #9400D3, #FF1493); color:white; margin-bottom: 15px;">🎧 Spotify Wrapped Viajero</button>
         <div class="bento-grid" id="contenido-dashboard"></div>
-        
-        <button id="btn-backup" class="btn-chicha" style="margin-top: 20px; background: linear-gradient(90deg, #9400D3, #4B0082); color: white; max-width: 500px; display: block; margin-left: auto; margin-right: auto;">💾 Descargar Copia Local</button>
-        <input type="file" id="input-importar" accept=".json" style="display: none;">
-        <button id="btn-importar" class="btn-chicha" style="margin-top: 10px; background: linear-gradient(90deg, #00FA9A, #00BFFF); color: white; max-width: 500px; display: block; margin-left: auto; margin-right: auto;">📂 Restaurar Copia Local</button>
-        
-        <button id="btn-cerrar-sesion" class="btn-chicha" style="margin-top: 10px; background: linear-gradient(90deg, #FF4500, #FF1493); color: white; max-width: 500px; display: block; margin-left: auto; margin-right: auto;">🚪 Cerrar Sesión</button>
+        <div class="botones-sistema-compactos"><button id="btn-backup" class="btn-sistema">💾 Respaldar</button><input type="file" id="input-importar" accept=".json" style="display: none;"><button id="btn-importar" class="btn-sistema">📂 Restaurar</button><button id="btn-cerrar-sesion" class="btn-sistema btn-sistema-peligro">🚪 Salir</button></div>
     </div>
 
     <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 9998; justify-content: center; align-items: center;">
         <div class="info-contenido" id="panel-tarjeta-viajes">
-            <button id="btn-cerrar-info" style="position: absolute; top: 15px; right: 15px; background: #FF1493; border: none; border-radius: 50%; width: 40px; height: 40px; color: white; font-weight: 900; cursor: pointer;">✖</button>
+            <div class="swipe-indicador"></div><button id="btn-cerrar-info" class="btn-cerrar-esquina-bento" style="background: rgba(255,20,147,0.2); border-color:#FF1493; color:white;">✖</button>
             <h2 id="info-provincia-titulo" class="titulo-chicha">PROVINCIA</h2>
-            
+            <div id="rango-provincia" style="color: #FFD700; font-size: 0.9rem; font-family: 'Paytone One', sans-serif; margin-bottom: 15px; letter-spacing: 1px;">🎒 Forastero</div>
+            <div id="contenedor-sello" style="text-align:center;"></div>
             <div id="info-lugares"></div>
-
-            <button id="btn-mostrar-formulario" class="btn-chicha" style="margin-top: 15px;">+ Añadir Expedición</button>
+            <button id="btn-mostrar-formulario" class="btn-chicha" style="margin-top: 15px;">+ Añadir Expedición o Wishlist</button>
             
-            <div id="formulario-registro" style="display: none; margin-top: 20px; border-top: 2px dashed #FF1493; padding-top: 20px;">
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <select id="nuevo-tipo" class="input-chicha" style="width: 50%; margin-bottom: 0; font-size: 0.8rem;">
-                        <option value="PERSONAL">🍹 Personal</option>
-                        <option value="TRABAJO">🚜 Trabajo/Obra</option>
-                        <option value="FUTBOL">⚽ Fútbol/Estadio</option>
-                    </select>
-                    <select id="nueva-compania" class="input-chicha" style="width: 50%; margin-bottom: 0; font-size: 0.8rem;">
-                        <option value="Solo">👤 Solo</option>
-                        <option value="Pareja">❤️ Pareja</option>
-                        <option value="Familia">👨‍👩‍👧‍👦 Familia</option>
-                        <option value="Equipo">👷 Equipo</option>
-                        <option value="Amigos">🍻 Amigos</option>
-                    </select>
-                </div>
+            <div id="formulario-registro" style="display: none; margin-top: 20px; border-top: 1px dashed rgba(255,20,147,0.5); padding-top: 20px;">
+                <select id="nuevo-estado" class="input-chicha" style="background: rgba(0, 255, 255, 0.1); border-color: #00FFFF; color: #00FFFF; font-weight:bold;">
+                    <option value="VISITADO">✅ Ya estuve aquí (Visitado)</option>
+                    <option value="WISHLIST">⭐ Quiero ir (Wishlist / Plan)</option>
+                </select>
 
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <select id="nuevo-tipo" class="input-chicha" style="width: 50%;"><option value="PERSONAL">🍹 Personal</option><option value="TRABAJO">🚜 Trabajo</option><option value="FUTBOL">⚽ Fútbol</option></select>
+                    <select id="nueva-compania" class="input-chicha" style="width: 50%;"><option value="Solo">👤 Solo</option><option value="Pareja">❤️ Pareja</option><option value="Familia">👨‍👩‍👧‍👦 Familia</option><option value="Equipo">👷 Equipo</option><option value="Amigos">🍻 Amigos</option></select>
+                </div>
                 <input type="text" id="nuevo-nombre" placeholder="Lugar, Ciudad o Zona" class="input-chicha">
+                <input type="date" id="nueva-fecha" class="input-chicha">
                 
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <label style="color: #00FA9A; font-size: 0.8rem; font-weight: bold;">Fecha:</label>
-                    <input type="date" id="nueva-fecha" class="input-chicha" style="margin-bottom: 0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <input type="text" id="nueva-coordenada" class="input-chicha" placeholder="📍 Lat, Lng" style="margin-bottom:0; flex:1; font-size:0.75rem;">
+                    <input type="text" id="nueva-altitud" class="input-chicha" placeholder="⛰️ Z msnm" style="margin-bottom:0; width:70px; font-size:0.75rem; color:#00FA9A; text-align:center;">
+                    <button id="btn-gps" class="btn-chicha btn-icono-chico" style="color:#FFD700; border-color:#FFD700;">🎯</button>
+                    <button id="btn-ubicar-mapa" class="btn-chicha btn-icono-chico" style="color:#00FFFF; border-color:#00FFFF;">🗺️</button>
                 </div>
 
-                <div id="campos-trabajo" style="display: none; background: rgba(255, 69, 0, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed #FF4500;">
-                    <select id="nuevo-tipo-proyecto" class="input-chicha">
-                        <option value="Levantamiento Topográfico">Levantamiento Topográfico</option>
-                        <option value="Control de Niveles / Trazo">Control de Niveles / Trazo</option>
-                        <option value="Vuelo Fotogramétrico / Dron">Vuelo Fotogramétrico / Dron</option>
-                        <option value="Movimiento de Tierras / Drenajes">Movimiento de Tierras / Drenajes</option>
-                        <option value="Otro">Otro Proyecto</option>
-                    </select>
-                    
-                    <p style="color: #FFD700; font-size: 0.8rem; margin: 5px 0;">Clima de la jornada:</p>
-                    <div class="botonera-opciones" id="selector-clima">
-                        <div class="btn-opcion" data-valor="☀️">☀️</div>
-                        <div class="btn-opcion" data-valor="☁️">☁️</div>
-                        <div class="btn-opcion" data-valor="🌧️">🌧️</div>
-                        <div class="btn-opcion" data-valor="❄️">❄️</div>
-                    </div>
-                    
-                    <p style="color: #FFD700; font-size: 0.8rem; margin: 10px 0 5px;">Calificación a la Empresa/Contratista:</p>
-                    <div class="contenedor-estrellas" id="estrellas-empresa">
-                        <span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span>
-                    </div>
+                <div id="campos-trabajo" style="display: none; background: rgba(255,69,0,0.05); padding: 10px; border-radius: 8px; border: 1px dashed rgba(255,69,0,0.3); margin-bottom:10px;">
+                    <select id="nuevo-tipo-proyecto" class="input-chicha"><option value="Topografía">Topografía</option><option value="Trazo">Trazo</option><option value="Dron">Dron</option><option value="Mov. Tierras">Mov. Tierras</option><option value="Otro">Otro</option></select>
+                    <p class="txt-dorado">Clima:</p><div class="botonera-opciones" id="selector-clima"><div class="btn-opcion" data-valor="☀️">☀️</div><div class="btn-opcion" data-valor="☁️">☁️</div><div class="btn-opcion" data-valor="🌧️">🌧️</div><div class="btn-opcion" data-valor="❄️">❄️</div></div>
+                    <p class="txt-dorado">Contratista:</p><div class="contenedor-estrellas" id="estrellas-empresa"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
                 </div>
 
-                <div id="campos-personal" style="display: block; background: rgba(0, 250, 154, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed #00FA9A;">
-                    <p style="color: #00FFFF; font-size: 0.8rem; margin: 5px 0;">Transporte principal:</p>
-                    <div class="botonera-opciones" id="selector-transporte">
-                        <div class="btn-opcion" data-valor="🚌">🚌</div>
-                        <div class="btn-opcion" data-valor="🚢">🚢</div>
-                        <div class="btn-opcion" data-valor="✈️">✈️</div>
-                        <div class="btn-opcion" data-valor="🚗">🚗</div>
-                    </div>
-                    <input type="text" id="nuevo-plato" placeholder="Plato o comida destacada" class="input-chicha" style="margin-top: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                        <span style="color: #00FFFF; font-size: 0.8rem;">Gastronomía:</span>
-                        <div class="contenedor-estrellas" id="estrellas-gastro"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                        <span style="color: #00FFFF; font-size: 0.8rem;">Hospedaje:</span>
-                        <div class="contenedor-estrellas" id="estrellas-hosp"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                        <span style="color: #00FFFF; font-size: 0.8rem;">Atractivos:</span>
-                        <div class="contenedor-estrellas" id="estrellas-atrac"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
-                    </div>
+                <div id="campos-personal" style="display: block; background: rgba(0,250,154,0.05); padding: 10px; border-radius: 8px; border: 1px dashed rgba(0,250,154,0.3); margin-bottom:10px;">
+                    <div class="botonera-opciones" id="selector-transporte"><div class="btn-opcion" data-valor="🚌">🚌</div><div class="btn-opcion" data-valor="🚢">🚢</div><div class="btn-opcion" data-valor="✈️">✈️</div><div class="btn-opcion" data-valor="🚗">🚗</div></div>
+                    <input type="text" id="nuevo-plato" placeholder="Plato destacado" class="input-chicha" style="margin-top:10px;">
+                    <div class="fila-estrellas"><span>Gastronomía:</span><div class="contenedor-estrellas" id="estrellas-gastro"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div></div>
+                    <div class="fila-estrellas"><span>Hospedaje:</span><div class="contenedor-estrellas" id="estrellas-hosp"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div></div>
+                    <div class="fila-estrellas"><span>Atractivos:</span><div class="contenedor-estrellas" id="estrellas-atrac"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div></div>
                 </div>
 
-                <div id="campos-futbol" style="display: none; background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed #FFF;">
-                    <input type="text" id="nuevo-estadio" placeholder="Nombre del Estadio (Ej. Matute)" class="input-chicha">
-                    <input type="text" id="nuevo-partido" placeholder="Motivo / Partido (Ej. vs U)" class="input-chicha">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                        <span style="color: #FFF; font-size: 0.8rem; font-weight: bold;">Hinchada / Ambiente:</span>
-                        <div class="contenedor-estrellas" id="estrellas-ambiente"><span data-valor="1">★</span><span data-valor="2">★</span><span data-valor="3">★</span><span data-valor="4">★</span><span data-valor="5">★</span></div>
-                    </div>
+                <div id="campos-futbol" style="display: none; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.3); margin-bottom:10px;">
+                    <input type="text" id="nuevo-estadio" placeholder="Estadio" class="input-chicha"><input type="text" id="nuevo-partido" placeholder="Partido" class="input-chicha">
+                    <div class="fila-estrellas"><span>Ambiente:</span><div class="contenedor-estrellas" id="estrellas-ambiente"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div></div>
                 </div>
 
-                <textarea id="nueva-info" placeholder="Detalles u observaciones de la expedición..." class="input-chicha"></textarea>
-                <input type="url" id="nuevo-link" placeholder="Enlace externo (Drone, Civil 3D, Video...)" class="input-chicha">
+                <input type="text" id="nuevo-contacto" placeholder="📞 Directorio: Guía, Taxista, Huarique..." class="input-chicha">
+                <textarea id="nueva-info" placeholder="Detalles de expedición..." class="input-chicha"></textarea>
+                <input type="url" id="nuevo-link" placeholder="🔗 Enlace externo (Drone, Civil 3D, Drive...)" class="input-chicha">
+
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;"><input type="file" id="foto-1" accept="image/*" class="file-chicha"><input type="file" id="foto-2" accept="image/*" class="file-chicha"></div>
                 
-                <p style="color: #00FA9A; font-size: 0.8rem; margin: 5px 0; text-align: left;">Adjuntar Fotos (Deja en blanco para conservar las actuales):</p>
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <input type="file" id="foto-1" accept="image/*" class="file-chicha">
-                    <input type="file" id="foto-2" accept="image/*" class="file-chicha">
-                </div>
-                
-                <button id="btn-guardar-registro" class="btn-chicha" style="background: linear-gradient(90deg, #00FFFF, #00FA9A);">💾 Guardar en la Nube</button>
-                <button id="btn-cancelar-edicion" class="btn-chicha" style="display: none; background: #FF4500; margin-top: 10px; color: white;">❌ Cancelar Edición</button>
-                <p id="mensaje-carga" style="color: #FFD700; font-weight: bold; display: none; margin-top: 10px;">Procesando en la nube, no cierres... ⏳</p>
+                <button id="btn-guardar-registro" class="btn-chicha" style="background: linear-gradient(90deg, #00FFFF, #00FA9A);">💾 Guardar</button>
+                <button id="btn-cancelar-edicion" class="btn-chicha btn-peligro" style="display: none; margin-top: 10px;">❌ Cancelar</button>
+                <p id="mensaje-carga" style="color: #FFD700; font-size: 0.8rem; display: none; margin-top: 10px;">Procesando... ⏳</p>
             </div>
         </div>
     </div>
 
+    <div id="modal-wrapped" class="pantalla-full glass-modal" style="display: none; opacity:0; z-index: 10050; padding:20px;">
+        <button onclick="document.getElementById('modal-wrapped').style.display='none'" class="btn-cerrar-esquina">✖</button>
+        <h1 style="color:#00FA9A; font-family:'Paytone One'; font-size:2rem; text-align:center; margin-top:20px;">TU AÑO VIAJERO</h1>
+        <div id="wrapped-content" style="text-align:center; color:white; font-size:1.1rem; line-height:1.6; margin-top:20px;"></div>
+    </div>
+
+    <div id="postal-generador" style="position:fixed; top:-9999px; left:-9999px; width:1080px; height:1920px; background:#0a1118; color:white; font-family:'Montserrat'; padding:80px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+        <h1 style="font-family:'Paytone One'; color:#00FFFF; font-size:5rem; text-transform:uppercase; margin-bottom:20px;" id="post-titulo"></h1>
+        <h2 style="color:#FFD700; font-size:3rem; margin-bottom:50px;" id="post-sub"></h2>
+        <img id="post-img" src="" style="width:900px; height:900px; object-fit:cover; border-radius:40px; border:10px solid #FF1493; box-shadow:0 0 50px rgba(255,20,147,0.5);">
+        <p id="post-desc" style="font-size:2.5rem; margin-top:50px; color:#ddd;"></p>
+        <div style="margin-top:auto; font-size:2rem; color:#00FA9A; font-weight:bold;">📍 Perú Go Premium</div>
+    </div>
+
+    <button id="btn-confirmar-ubicacion" class="btn-flotante-gigante" style="display: none;">✅ CONFIRMAR COORDENADA</button>
     <h1 id="titulo-mapa" class="titulo-chicha">PERÚ <span class="go-text">GO</span></h1>
     <h2 id="titulo-departamento" class="titulo-chicha"></h2>
     
-    <button id="btn-volver" class="btn-flotante-volver" style="display: none;">🔙</button>
+    <div id="contenedor-bottom-bar" class="bottom-bar" style="display: none;">
+        <button id="btn-volver" class="bar-btn" style="display: none; color: #FF4500;">🔙</button>
+        <button id="btn-capas" class="bar-btn">🗺️</button>
+        <button id="btn-mute" class="bar-btn">🔊</button>
+        <button id="btn-filtro" class="bar-btn">🌍</button>
+        <button id="btn-buscar" class="bar-btn">🔍</button>
+        <button id="btn-dashboard" class="bar-btn">📊</button>
+    </div>
 
     <div id="map"></div>
     
-        <div id="contenedor-menu-flotante" style="display: none; position: fixed; bottom: 100px; left: 20px; z-index: 9999;">
-        <div id="menu-hijos" style="position: absolute; bottom: 65px; left: 0; display: flex; flex-direction: column-reverse; gap: 15px; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.3s ease;">
-            <button id="btn-mute" class="btn-flotante" style="position: relative; inset: auto; margin: 0;">🔊</button>
-            <button id="btn-filtro" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #00FFFF; box-shadow: 0 0 10px #00FFFF;">🌍</button>
-            <button id="btn-dashboard" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #FFD700; box-shadow: 0 0 10px #FFD700;">📊</button>
-            <button id="btn-constelacion" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #9400D3; box-shadow: 0 0 10px #9400D3;">🌌</button>
-            <button id="btn-buscar" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #FF1493; box-shadow: 0 0 10px #FF1493;">🔍</button>
-        </div>
-        
-        <button id="btn-maestro-menu" class="btn-flotante" style="position: relative; inset: auto; margin: 0; border-color: #FFF; box-shadow: 0 0 15px rgba(255,255,255,0.5); font-size: 1.5rem; transition: all 0.3s ease;">🛠️</button>
-    </div>
-        <div id="menu-hijos" style="display: flex; flex-direction: column-reverse; gap: 15px; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.3s ease;">
-            <button id="btn-mute" class="btn-flotante" style="position: static;">🔊</button>
-            <button id="btn-filtro" class="btn-flotante" style="position: static; border-color: #00FFFF; box-shadow: 0 0 10px #00FFFF;">🌍</button>
-            <button id="btn-dashboard" class="btn-flotante" style="position: static; border-color: #FFD700; box-shadow: 0 0 10px #FFD700;">📊</button>
-            <button id="btn-constelacion" class="btn-flotante" style="position: static; border-color: #9400D3; box-shadow: 0 0 10px #9400D3;">🌌</button>
-            <button id="btn-buscar" class="btn-flotante" style="position: static; border-color: #FF1493; box-shadow: 0 0 10px #FF1493;">🔍</button>
-        </div>
-    </div>
-    <div id="visor-fotos" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.92); z-index: 10010; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transition: opacity 0.3s ease;">
-        <button onclick="cerrarVisorFotos()" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: #FFF; font-size: 2.5rem; cursor: pointer; font-weight: bold; z-index: 10011; text-shadow: 0 0 10px #000;">✖</button>
-        <img id="img-visor" src="" style="max-width: 95%; max-height: 85vh; border: 2px solid #00FFFF; border-radius: 10px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.3); object-fit: contain;">
+    <div id="visor-fotos" class="pantalla-full glass-modal" style="display: none; opacity:0; z-index: 10010;">
+        <div class="swipe-indicador" style="position: absolute; top: 20px;"></div>
+        <button onclick="cerrarVisorFotos()" class="btn-cerrar-esquina" style="font-size:2.5rem;">✖</button>
+        <img id="img-visor" src="" style="max-width:95%; max-height:85vh; border-radius:10px; border:1px solid #00FFFF; box-shadow:0 10px 30px rgba(0,0,0,0.8); object-fit:contain;">
     </div>
 
-    <div id="contenedor-progreso">
-        <div id="barra-fondo"><div id="barra-relleno"></div></div>
-        <img src="./assets/img/mascota-explora.webp" id="mascota-progreso" alt="Explorador">
-        <span id="texto-progreso">0%</span>
-    </div>
+    <div id="contenedor-progreso"><div id="barra-fondo"><div id="barra-relleno"></div></div><img src="./assets/img/mascota-explora.webp" id="mascota-progreso" alt="Explorador"><span id="texto-progreso">0%</span></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <!-- VISOR DE FOTOS NATIVO (LIGHTBOX) -->
-    <div id="visor-fotos" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.92); z-index: 10010; justify-content: center; align-items: center; flex-direction: column; opacity: 0; transition: opacity 0.3s ease;">
-        <button onclick="cerrarVisorFotos()" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: #FFF; font-size: 2.5rem; cursor: pointer; font-weight: bold; z-index: 10011; text-shadow: 0 0 10px #000;">✖</button>
-        <img id="img-visor" src="" style="max-width: 95%; max-height: 85vh; border: 2px solid #00FFFF; border-radius: 10px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.3); object-fit: contain;">
-    </div>
     <script type="module" src="firebase.js"></script>
-    <script type="module" src="app.js?v=8"></script>
+    <script type="module" src="app.js?v=18"></script>
     <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }</script>
 </body>
 </html>
