@@ -17,13 +17,14 @@
     <button id="btn-actualizar-app" style="position: fixed; bottom: 5px; right: 5px; z-index: 10001; background: transparent; color: rgba(255,255,255,0.2); border: none; font-size: 0.6rem; cursor: pointer;">actualizar</button>
     
     <div id="toast-container"></div>
-    <div id="pantalla-acceso">
-        <div class="acceso-flotante">
+    
+    <div id="pantalla-acceso" class="pantalla-full">
+        <div class="acceso-flotante glass-modal" style="padding: 40px; border-radius: 25px; border: 1px solid rgba(0,255,255,0.3); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
             <img src="./assets/img/mascota-hola.webp" id="avatar-guia" alt="Guía">
-            <p class="instruccion">Acceso a la Expedición</p>
-            <div class="input-wrapper" style="margin-bottom: 15px;"><input type="email" id="email" placeholder="tu@correo.com" class="input-transparente"></div>
-            <div class="input-wrapper"><input type="password" id="pass" placeholder="••••" class="input-transparente"></div>
-            <button id="btn-ingresar">Entrar</button>
+            <p class="instruccion" style="margin-bottom: 20px;">Acceso a la Expedición</p>
+            <input type="email" id="email" placeholder="tu@correo.com" class="input-chicha" style="text-align: center; width: 100%;">
+            <input type="password" id="pass" placeholder="••••" class="input-chicha" style="text-align: center; width: 100%; margin-bottom: 25px;">
+            <button id="btn-ingresar" class="btn-chicha" style="width: 100%;">Entrar</button>
         </div>
     </div>
 

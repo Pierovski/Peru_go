@@ -469,8 +469,25 @@ btnMute.onclick = () => { if(audioAmbiental.paused) audioAmbiental.play().catch(
 const btnActualizar=document.getElementById('btn-actualizar-app'); if(btnActualizar) btnActualizar.onclick=()=>{ if('caches' in window){ caches.keys().then(ns=>Promise.all(ns.map(n=>caches.delete(n))).then(()=>window.location.reload(true))); }else window.location.reload(true); };
 if(btnCerrarSesion) btnCerrarSesion.onclick=async()=>{ await signOut(auth); window.location.reload(); };
 
+
 onAuthStateChanged(auth, (u) => {
-    if(u) { pantallaAcceso.style.display='none'; pantallaCarga.style.display='flex'; contenedorMapa.style.display='block'; tituloMapa.style.display='block'; contenedorProgreso.style.display='block'; inicializarMapa(); if(!audioAmbiental.src) reproducirMusicaAleatoria(); document.body.addEventListener('click', ()=>{ if(audioAmbiental.paused&&!audioAmbiental.muted) audioAmbiental.play().catch(()=>{}); }, {once:true}); } else { pantallaAcceso.style.display='flex'; pantallaAcceso.style.opacity='1'; contenedorMapa.style.display='none'; tituloMapa.style.display='none'; contenedorProgreso.style.display='none'; }
+    if(u) { 
+        pantallaAcceso.style.display='none'; 
+        pantallaCarga.style.display='flex'; 
+        contenedorMapa.style.display='block'; 
+        tituloMapa.style.display='block'; 
+        contenedorProgreso.style.display='block'; 
+        inicializarMapa(); 
+        if(!audioAmbiental.src) reproducirMusicaAleatoria(); 
+        document.body.addEventListener('click', ()=>{ if(audioAmbiental.paused&&!audioAmbiental.muted) audioAmbiental.play().catch(()=>{}); }, {once:true}); 
+    } else { 
+        pantallaAcceso.style.display='flex'; 
+        pantallaAcceso.style.opacity='1'; 
+        pantallaCarga.style.display='none'; // <--- ESTA ES LA LÍNEA QUE FALTABA
+        contenedorMapa.style.display='none'; 
+        tituloMapa.style.display='none'; 
+        contenedorProgreso.style.display='none'; 
+    }
 });
 
 window.toggleAcordeon=(id)=>{ const b=document.getElementById(`body-${id}`); const f=document.getElementById(`flecha-${id}`); if(b&&f){ b.classList.toggle('abierto'); f.classList.toggle('rotada'); } };
