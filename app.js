@@ -73,6 +73,7 @@ let capaNacional; let capaProvincias; let mapa; let datosGeoJSON = null; let dat
 let temporizadorBuscador; let capaSatelite; let sateliteActivo = false;
 let capaPinesProvincia; let capaPinTemporal; let tempLat = null; let tempLng = null; let seleccionandoUbicacion = false; let markerDraggable = null;
 let mapaYaInicializado = false;
+let tabVisitaActiva = 'TODAS';
 
 const coloresChichaPremium = [ "#FF1493", "#00FA9A", "#FFD700", "#00FFFF", "#FF4500", "#9400D3" ];
 const audios = [ './assets/audio/musica-uno.mp3', './assets/audio/musica-dos.mp3', './assets/audio/musica-tres.mp3' ];
@@ -209,9 +210,15 @@ function dibujarMapaNacional() {
                             const nP = fP.properties.NOMBPROV.trim().toUpperCase(); const c = coloresChichaPremium[fP.properties.NOMBPROV.length % coloresChichaPremium.length];
                             let hasV=false; let hasW=false;
                             if(datosViajes[nP]) { const filtrados = datosViajes[nP].filter(pasaFiltros); hasV=filtrados.some(v=>(v.estado||'VISITADO')==='VISITADO'); hasW=filtrados.some(v=>v.estado==='WISHLIST'); }
-                            if (hasV) return { color: c, weight: 3, fillColor: c, fillOpacity: 0.35, className: 'poligono-vidrio' }; 
-                            else if (hasW) return { color: "#00FFFF", weight: 2, fillColor: "#00FFFF", fillOpacity: 0.15, className: 'poligono-wishlist' };
-                            else return { color: "#444", weight: 1, fillColor: "#111", fillOpacity: 0.7, className: 'poligono-raspadita' };
+                            
+                            // TRANSPARENCIA INTELIGENTE EN MODO SATÉLITE PARA TODAS LAS PROVINCIAS
+                            const opV = sateliteActivo ? 0.05 : 0.35;
+                            const opW = sateliteActivo ? 0.05 : 0.15;
+                            const opN = sateliteActivo ? 0.05 : 0.7;
+
+                            if (hasV) return { color: c, weight: 3, fillColor: c, fillOpacity: opV, className: 'poligono-vidrio' }; 
+                            else if (hasW) return { color: "#00FFFF", weight: 2, fillColor: "#00FFFF", fillOpacity: opW, className: 'poligono-wishlist' };
+                            else return { color: "#444", weight: 2, fillColor: "#111", fillOpacity: opN, className: 'poligono-raspadita' };
                         },
                         onEachFeature: function(fP, lP) {
                             const nP = fP.properties.NOMBPROV; const c = coloresChichaPremium[nP.length % coloresChichaPremium.length];
@@ -225,7 +232,22 @@ function dibujarMapaNacional() {
     }).addTo(mapa);
 }
 
-if (btnCapas) { btnCapas.onclick = () => { if(sateliteActivo){ mapa.removeLayer(capaSatelite); btnCapas.style.textShadow="";}else{ capaSatelite.addTo(mapa); capaSatelite.bringToBack(); btnCapas.style.textShadow="0 0 15px #00FFFF";} sateliteActivo=!sateliteActivo; }; }
+if (btnCapas) { 
+    btnCapas.onclick = () => { 
+        if(sateliteActivo){ 
+            mapa.removeLayer(capaSatelite); 
+            btnCapas.style.textShadow="";
+        }else{ 
+            capaSatelite.addTo(mapa); 
+            capaSatelite.bringToBack(); 
+            btnCapas.style.textShadow="0 0 15px #00FFFF";
+        } 
+        sateliteActivo=!sateliteActivo; 
+        if (capaProvincias) {
+            capaProvincias.eachLayer(l => capaProvincias.resetStyle(l));
+        }
+    }; 
+}
 
 // =========================================
 // 6. FILTROS Y NAVEGACIÓN
@@ -237,9 +259,21 @@ if (btnCerrarFiltros) btnCerrarFiltros.onclick = window.cerrarFiltros;
 habilitarSwipeToClose('#pantalla-filtros', window.cerrarFiltros);
 
 if (btnLimpiarFiltros) { btnLimpiarFiltros.onclick = () => { document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(b => b.classList.remove('seleccionado')); document.querySelector('#filtro-categoria .btn-opcion[data-valor="TODOS"]').classList.add('seleccionado'); inputFiltroInicio.value=''; inputFiltroFin.value=''; filtroActualMundo='TODOS'; filtroFechaInicio=null; filtroFechaFin=null; btnFiltro.innerText=iconosFiltro['TODOS']; btnFiltro.style.textShadow=""; mostrarToast("Filtros limpios"); refrescarMundoLocal(); window.cerrarFiltros(); }; }
-if (btnAplicarFiltros) { btnAplicarFiltros.onclick = () => { const cat = document.querySelector('#filtro-categoria .btn-opcion.seleccionado'); filtroActualMundo = cat ? cat.dataset.valor : 'TODOS'; filtroFechaInicio = inputFiltroInicio.value||null; filtroFechaFin = inputFiltroFin.value||null; btnFiltro.innerText = iconosFiltro[filtroActualMundo]||'🌍'; btnFiltro.style.textShadow = filtroActualMundo!=='TODOS'||filtroFechaInicio||filtroFechaFin ? "0 0 15px #00FFFF" : ""; mostrarToast("Filtros aplicados"); refrescarMundoLocal(); window.cerrarFiltros(); }; }
+if (btnAplicarFiltros) { btnAplicarFiltros.onclick = () => { const cat = document.querySelector('#filtro-categoria .btn-opcion.seleccionado'); filtroActualMundo = cat ? cat.dataset.valor : 'TODOS'; filtroFechaInicio = inputFiltroInicio.value||null; filtroFechaFin = inputFiltroFin.value||null; btnFiltro.innerText = iconosFiltro[filtroActualMundo]||'🌍'; btnFiltro.style.textShadow = filtroActualMundo!=='TODOS'||filtroFechaInicio||filtroFechaFin ? "0 0 15px #00FFFF" : ""; mostrarToast("Filtros applied"); refrescarMundoLocal(); window.cerrarFiltros(); }; }
 
 function refrescarMundoLocal() { if(capaNacional && btnVolver.style.display==='none'){ capaNacional.eachLayer(l=>capaNacional.resetStyle(l)); actualizarProgresoGlobal(); } else if(capaProvincias){ capaProvincias.eachLayer(l=>capaProvincias.resetStyle(l)); actualizarProgresoDepartamental(tituloDepartamento.innerText.trim().toUpperCase()); } }
+
+// EVENTO CLIC PESTAÑAS HYBRID UI
+document.querySelectorAll('.btn-tab-visita').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('.btn-tab-visita').forEach(b => b.classList.remove('activo'));
+        btn.classList.add('activo');
+        tabVisitaActiva = btn.dataset.tab;
+        const nomL = tituloInfoProvincia.innerText.trim().toUpperCase();
+        const col = tituloInfoProvincia.style.webkitTextFillColor;
+        renderizarLugares(nomL, col);
+    };
+});
 
 function calcRacha() {
     const fSet = new Set(); Object.values(datosViajes).forEach(p => p.forEach(v => { if(v.fecha && pasaFiltros(v) && v.estado!=='WISHLIST') { const [a, m]=v.fecha.split('-'); if(a&&m) fSet.add(`${a}-${m}`); }}));
@@ -296,7 +330,7 @@ if(btnWrapped) {
 
 window.cerrarDashboard = () => { pantallaDashboard.style.transform = ''; pantallaDashboard.classList.remove('activo'); setTimeout(() => { pantallaDashboard.style.display = 'none'; fondoDashboard.style.display = 'none'; }, 400); };
 if(btnCerrarDashboard) btnCerrarDashboard.onclick = window.cerrarDashboard;
-if(fondoDashboard) fondoDashboard.onclick = () => { window.cerrarDashboard(); window.cerrarFiltros(); }; 
+if(fondoDashboard) fondoDashboard.onclick = () => { window.cerrarDashboard(); window.cerrarFiltros(); window.cerrarBuscador(); }; 
 habilitarSwipeToClose('.dashboard-bento', window.cerrarDashboard); habilitarSwipeToClose('.info-contenido', () => { if(btnCerrarInfo) btnCerrarInfo.click(); }); habilitarSwipeToClose('#visor-fotos', () => { if(window.cerrarVisorFotos) window.cerrarVisorFotos(); });
 
 // =========================================
@@ -345,7 +379,15 @@ function dibujarPinesProvincia(nom) {
 
 function abrirInformacionProvincia(nomOri, col) {
     const nomL = nomOri.trim().toUpperCase(); tituloInfoProvincia.innerText=nomOri; tarjetaContenidoInfo.style.borderColor=col; tarjetaContenidoInfo.style.boxShadow=`0 0 20px ${col}`; tituloInfoProvincia.style.webkitTextFillColor=col;
-    limpiarFormulario(); mostrarSkeletonLoading(); dibujarPinesProvincia(nomL);
+    limpiarFormulario(); 
+    
+    // RESET DE PESTAÑAS HYBRID UI
+    tabVisitaActiva = 'TODAS';
+    document.querySelectorAll('.btn-tab-visita').forEach(b => b.classList.remove('activo'));
+    const btnTodas = document.querySelector('.btn-tab-visita[data-tab="TODAS"]');
+    if (btnTodas) btnTodas.classList.add('activo');
+
+    mostrarSkeletonLoading(); dibujarPinesProvincia(nomL);
     
     // CALCULAR RANGO DE "ALCALDE"
     let numVisitas = 0;
@@ -358,25 +400,60 @@ function abrirInformacionProvincia(nomOri, col) {
     
     if (rangoProvincia) rangoProvincia.innerText = txtRango;
 
-    // SELLO DIGITAL 
-    const sC = document.getElementById('contenedor-sello'); sC.innerHTML = '';
-    if(numVisitas > 0) sC.innerHTML = `<div class="sello-pasaporte">VISITADO</div>`;
-
     pantallaInfo.style.display='flex'; tarjetaContenidoInfo.style.transform=''; setTimeout(()=>renderizarLugares(nomL,col), 800);
 }
 
 function renderizarLugares(nomL, col) {
-    contenedorLugares.innerHTML = ''; let lug = (datosViajes[nomL]||[]).filter(pasaFiltros);
-    if(lug.length===0) return insertarTarjetaLugarSegura(`<div class="lugar-card" style="border-left-color: #FF4500; padding:15px;"><h3>📍 Zona por explorar</h3></div>`);
+    contenedorLugares.innerHTML = ''; 
+    let lug = (datosViajes[nomL]||[]).filter(pasaFiltros);
+    
+    // Filtro de pestañas locales
+    if (tabVisitaActiva !== 'TODAS') {
+        lug = lug.filter(v => (v.tipo || 'PERSONAL') === tabVisitaActiva);
+    }
+
+    if(lug.length===0) return insertarTarjetaLugarSegura(`<div class="timeline-item"><div class="card-visual" style="border-left: 4px solid #FF4500;"><div class="card-content"><h3 class="card-title" style="color:#FF4500; font-size:0.9rem;">📍 Sin registros en esta categoría</h3></div></div></div>`);
+    
+    // Ordenar cronológicamente (Recientes primero)
+    lug.sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
+
     lug.forEach(v => {
+        let bgImg = v.foto1 ? `<div class="card-bg" style="background-image: url('${v.foto1}');"></div>` : (v.foto2 ? `<div class="card-bg" style="background-image: url('${v.foto2}');"></div>` : '');
+        let textColor = bgImg ? "#FFF" : col;
+
         let fH = ''; if(v.foto1||v.foto2) fH = `<div style="display:flex;gap:4%;margin-top:15px;justify-content:center;">${v.foto1?`<img src="${v.foto1}" class="foto-viaje" onclick="abrirVisorFotos('${v.foto1}')">`:''}${v.foto2?`<img src="${v.foto2}" class="foto-viaje" onclick="abrirVisorFotos('${v.foto2}')">`:''}</div>`;
-        const est = v.estado || 'VISITADO'; const tT = est==='WISHLIST' ? '<span class="tag-info tag-wishlist">⭐ Wishlist</span>' : v.tipo==='TRABAJO'?'<span class="tag-info tag-trabajo">🚜 Trabajo</span>':v.tipo==='FUTBOL'?'<span class="tag-info tag-futbol">⚽ Fútbol</span>':'<span class="tag-info tag-personal">🍹 Personal</span>';
+        const est = v.estado || 'VISITADO'; 
+        const tT = est==='WISHLIST' ? '<span class="tag-info tag-wishlist">⭐ Wishlist</span>' : v.tipo==='TRABAJO'?'<span class="tag-info tag-trabajo">🚜 Trabajo</span>':v.tipo==='FUTBOL'?'<span class="tag-info tag-futbol">⚽ Fútbol</span>':'<span class="tag-info tag-personal">🍹 Personal</span>';
         const eD = `<button class="btn-editar" onclick="event.stopPropagation(); prepararEdicion('${v.id}','${nomL}')">✏️</button><button class="btn-eliminar" onclick="event.stopPropagation(); eliminarRegistro('${v.id}','${nomL}')">🗑️</button>`;
         const s = (n)=>'★'.repeat(n||0)+'<span style="color:rgba(255,255,255,0.2);">'+'★'.repeat(5-(n||0))+'</span>';
-        let det = ''; if(v.tipo==='TRABAJO') det=`<p style="font-size:0.8rem;">${v.tipoProyecto?`<b>Proy:</b> ${v.tipoProyecto}<br>`:''}<b>Contratista:</b> <span style="color:#FFD700;">${s(v.empresa)}</span> ${v.clima||''}</p>`; else if(v.tipo==='FUTBOL') det=`<p style="font-size:0.8rem;">${v.estadio?`<b>Estadio:</b> ${v.estadio}<br>`:''}<b>Ambiente:</b> <span style="color:#FFD700;">${s(v.ambiente)}</span></p>`; else det=`<p style="font-size:0.8rem;">${v.platoDestacado?`<b>Plato:</b> ${v.platoDestacado}<br>`:''}<b>Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span><br><b>Hospedaje:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${v.transporte||''}</p>`;
-        if(v.contacto) det += `<p style="font-size:0.75rem; color:#00FFFF;">📞 <b>Directorio:</b> ${v.contacto}</p>`;
+        let det = ''; if(v.tipo==='TRABAJO') det=`<p style="font-size:0.8rem; text-shadow:0 1px 2px #000;">${v.tipoProyecto?`<b>Proy:</b> ${v.tipoProyecto}<br>`:''}<b>Contratista:</b> <span style="color:#FFD700;">${s(v.empresa)}</span> ${v.clima||''}</p>`; else if(v.tipo==='FUTBOL') det=`<p style="font-size:0.8rem; text-shadow:0 1px 2px #000;">${v.estadio?`<b>Estadio:</b> ${v.estadio}<br>`:''}<b>Ambiente:</b> <span style="color:#FFD700;">${s(v.ambiente)}</span></p>`; else det=`<p style="font-size:0.8rem; text-shadow:0 1px 2px #000;">${v.platoDestacado?`<b>Plato:</b> ${v.platoDestacado}<br>`:''}<b>Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span><br><b>Hospedaje:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${v.transporte||''}</p>`;
+        if(v.contacto) det += `<p style="font-size:0.75rem; color:#00FFFF; text-shadow:0 1px 2px #000;">📞 <b>Directorio:</b> ${v.contacto}</p>`;
         
-        insertarTarjetaLugarSegura(`<div class="lugar-card" style="border-left-color:${col}"><div class="tarjeta-header" onclick="toggleAcordeon('${v.id}')"><h3>${v.nombre}</h3><div class="flecha-acordeon" id="flecha-${v.id}">▼</div></div><div class="tarjeta-body" id="body-${v.id}">${eD}<div style="margin-bottom:5px;">${tT} <span class="tag-info tag-compania">${v.compania||'Solo'}</span></div><p><b>Fecha:</b> ${v.fecha||''} ${v.altitud ? `| <b>Z:</b> ${v.altitud}m` : ''}</p>${det}<p style="color:#aaa;margin-top:8px;"><em>${v.info||''}</em></p>${v.link?`<a href="${v.link}" target="_blank" class="btn-link">🔗 Docs</a>`:''} ${est==='VISITADO' && (v.foto1||v.foto2) ? `<button class="btn-postal" onclick="generarPostalIG('${v.id}','${nomL}')">📸 IG Story</button>` : ''} ${fH}</div></div>`);
+        insertarTarjetaLugarSegura(`
+            <div class="timeline-item">
+                <div class="card-visual" style="${bgImg ? '' : `border-left: 4px solid ${col};`}">
+                    ${bgImg}
+                    <div class="card-content">
+                        <div class="card-header" onclick="toggleAcordeon('${v.id}')">
+                            <div>
+                                <h3 class="card-title" style="color: ${textColor};">${v.nombre}</h3>
+                                <span class="card-date">${v.fecha||'Sin fecha'} ${v.altitud ? `| <b>Z:</b> ${v.altitud}m` : ''}</span>
+                            </div>
+                            <div class="flecha-acordeon" id="flecha-${v.id}" style="color: ${textColor}; text-shadow: 0 0 5px rgba(0,0,0,0.8);">▼</div>
+                        </div>
+                        <div class="tarjeta-body" id="body-${v.id}">
+                            ${eD}
+                            <div style="margin-bottom:5px;">${tT} <span class="tag-info tag-compania">${v.compania||'Solo'}</span></div>
+                            ${det}
+                            <p style="color:#ddd; margin-top:8px; text-shadow: 0 1px 3px #000; font-size: 0.85rem;"><em>${v.info||''}</em></p>
+                            ${v.link?`<a href="${v.link}" target="_blank" class="btn-link">🔗 Docs</a>`:''} 
+                            ${est==='VISITADO' && (v.foto1||v.foto2) ? `<button class="btn-postal" onclick="generarPostalIG('${v.id}','${nomL}')">📸 IG Story</button>` : ''} 
+                            ${fH}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
     });
 }
 
@@ -397,7 +474,11 @@ function limpiarFormulario() {
 }
 
 window.prepararEdicion = (id, pL) => {
-    const v = datosViajes[pL].find(x => x.id === id); if(!v) return; idEdicionActual = id; limpiarFormulario();
+    const v = datosViajes[pL].find(x => x.id === id); if(!v) return; 
+    
+    limpiarFormulario(); // <-- 1. PRIMERO limpiamos todo rastro anterior
+    idEdicionActual = id; // <-- 2. LUEGO guardamos el ID correcto
+    
     document.getElementById('nuevo-estado').value=v.estado||'VISITADO'; document.getElementById('nuevo-tipo').value=v.tipo||'PERSONAL'; document.getElementById('nuevo-tipo').dispatchEvent(new Event('change')); document.getElementById('nueva-compania').value=v.compania||'Solo'; document.getElementById('nuevo-nombre').value=v.nombre||''; document.getElementById('nueva-fecha').value=v.fecha||''; document.getElementById('nueva-info').value=v.info||''; document.getElementById('nueva-altitud').value=v.altitud||''; document.getElementById('nuevo-contacto').value=v.contacto||'';
     const elLink = document.getElementById('nuevo-link'); if(elLink) elLink.value = v.link || '';
     tempLat=v.lat||null; tempLng=v.lng||null; document.getElementById('nueva-coordenada').value=tempLat?`${tempLat.toFixed(6)}, ${tempLng.toFixed(6)}`:''; capaPinTemporal.clearLayers(); if(tempLat) L.marker([tempLat,tempLng],{icon:L.divIcon({className:'chinche-premium',html:'📍',iconSize:[28,28],iconAnchor:[14,28]})}).addTo(capaPinTemporal);
@@ -442,7 +523,6 @@ if(btnGuardarRegistro) {
             if (rangoProvincia) rangoProvincia.innerText = txtRango;
 
             renderizarLugares(pA, tituloInfoProvincia.style.webkitTextFillColor); dibujarPinesProvincia(pA);
-            const sC=document.getElementById('contenedor-sello'); if(numVisitas > 0) sC.innerHTML = `<div class="sello-pasaporte">VISITADO</div>`;
             if(capaProvincias) capaProvincias.eachLayer(l=>capaProvincias.resetStyle(l)); actualizarProgresoGlobal(); limpiarFormulario(); 
         } catch(e){} btnGuardarRegistro.disabled=false; mensajeCarga.style.display='none';
     };
@@ -458,17 +538,60 @@ function actualizarProgresoDepartamental(nD) { const pr=datosProvinciasGenerales
 if(btnBackup) btnBackup.onclick = () => { const blob=new Blob([JSON.stringify(datosViajes,null,2)],{type:"application/json"}); const u=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=u; a.download=`PeruGo_${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
 if(btnImportar&&inputImportar) { btnImportar.onclick=()=>inputImportar.click(); inputImportar.onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; if(!confirm("⚠️ Restaurar fusionará datos.")) return; const r=new FileReader(); r.onload=async(ev)=>{ try{ const js=JSON.parse(ev.target.result); let p=[]; Object.keys(js).forEach(pr=>js[pr].forEach(v=>{ const rd=doc(db,"viajes",v.id); const d={...v}; delete d.id; p.push(setDoc(rd,d)); })); await Promise.all(p); window.location.reload(); }catch(err){} }; r.readAsText(f); }; }
 
-if(btnBuscar) btnBuscar.onclick = () => { pantallaBuscador.style.display='flex'; setTimeout(()=>pantallaBuscador.style.opacity='1',10); inputBuscador.focus(); };
-window.cerrarBuscador = () => { pantallaBuscador.style.opacity='0'; setTimeout(()=>{ pantallaBuscador.style.display='none'; inputBuscador.value=''; resultadosBuscador.innerHTML=''; },300); };
+// EVENTOS DEL BUSCADOR REDISEÑADO TIPO BOTTOM SHEET
+if(btnBuscar) btnBuscar.onclick = () => { 
+    fondoDashboard.style.display = 'block'; 
+    pantallaBuscador.style.display = 'block'; 
+    setTimeout(() => pantallaBuscador.classList.add('activo'), 10); 
+    inputBuscador.focus(); 
+};
+window.cerrarBuscador = () => { 
+    pantallaBuscador.style.transform = ''; 
+    pantallaBuscador.classList.remove('activo'); 
+    setTimeout(()=>{ 
+        pantallaBuscador.style.display='none'; 
+        fondoDashboard.style.display='none'; 
+        inputBuscador.value=''; 
+        resultadosBuscador.innerHTML=''; 
+    }, 400); 
+};
+habilitarSwipeToClose('#pantalla-buscador', window.cerrarBuscador);
+
 if(inputBuscador) inputBuscador.addEventListener('input', (e) => { clearTimeout(temporizadorBuscador); const tx=e.target.value.toLowerCase().trim(); if(tx.length<2){ resultadosBuscador.innerHTML=''; return; } temporizadorBuscador=setTimeout(()=>{ let h=''; let c=0; Object.keys(datosViajes).forEach(p=>datosViajes[p].forEach(v=>{ const sr=`${v.nombre||''} ${v.info||''} ${p}`.toLowerCase(); if(sr.includes(tx)){ const dF=datosProvinciasGenerales.features.find(x=>x.properties.NOMBPROV.trim().toUpperCase()===p); const nD=dF?dF.properties.FIRST_NOMB:''; h+=`<div class="resultado-item" onclick="volarAProvincia('${p}','${nD}')"><h4>${v.nombre} <span style="color:#FFD700;">(${p})</span></h4><p>${v.fecha||''}</p></div>`; c++; } })); resultadosBuscador.innerHTML=c===0?'<p>No se encontraron.</p>':h; }, 300); });
-window.volarAProvincia = (nP, nD) => { cerrarBuscador(); const f={type:"FeatureCollection",features:datosProvinciasGenerales.features.filter(p=>p.properties.FIRST_NOMB.trim().toUpperCase()===nD.trim().toUpperCase())}; if(capaProvincias) mapa.removeLayer(capaProvincias); capaNacional.eachLayer(l=>capaNacional.resetStyle(l)); capaProvincias=L.geoJSON(f,{style:function(fP){ const nPr=fP.properties.NOMBPROV.trim().toUpperCase(); const c=coloresChichaPremium[nPr.length%coloresChichaPremium.length]; let hV=false;let hW=false; if(datosViajes[nPr]){ const fil=datosViajes[nPr].filter(pasaFiltros); hV=fil.some(v=>(v.estado||'VISITADO')==='VISITADO'); hW=fil.some(v=>v.estado==='WISHLIST'); } if(hV) return {color:c,weight:3,fillColor:c,fillOpacity:0.35,className:'poligono-vidrio'}; else if(hW) return {color:"#00FFFF",weight:2,fillColor:"#00FFFF",fillOpacity:0.15,className:'poligono-wishlist'}; else return {color:"#444",weight:1,fillColor:"#111",fillOpacity:0.7,className:'poligono-raspadita'}; }, onEachFeature:function(fP,lP){ const nPr=fP.properties.NOMBPROV; const c=coloresChichaPremium[nPr.length%coloresChichaPremium.length]; lP.bindTooltip(`<span style="color:${c};">${nPr}</span>`,{permanent:true,direction:'center',className:'etiqueta-provincia',interactive:false}); lP.on('click',()=>abrirInformacionProvincia(nPr,c)); } }).addTo(mapa); mapa.fitBounds(L.geoJSON(f).getBounds()); mapa.removeLayer(capaNacional); tituloMapa.style.display='none'; tituloDepartamento.innerText=nD; tituloDepartamento.style.display='block'; btnVolver.style.display='inline-block'; actualizarProgresoDepartamental(nD.trim().toUpperCase()); abrirInformacionProvincia(nP, coloresChichaPremium[nP.length%coloresChichaPremium.length]); };
+
+window.volarAProvincia = (nP, nD) => { 
+    cerrarBuscador(); 
+    const f={type:"FeatureCollection",features:datosProvinciasGenerales.features.filter(p=>p.properties.FIRST_NOMB.trim().toUpperCase()===nD.trim().toUpperCase())}; 
+    if(capaProvincias) mapa.removeLayer(capaProvincias); 
+    capaNacional.eachLayer(l=>capaNacional.resetStyle(l)); 
+    capaProvincias=L.geoJSON(f,{
+        style:function(fP){ 
+            const nPr=fP.properties.NOMBPROV.trim().toUpperCase(); 
+            const c=coloresChichaPremium[nPr.length%coloresChichaPremium.length]; 
+            let hV=false; let hW=false; 
+            if(datosViajes[nPr]){ 
+                const fil=datosViajes[nPr].filter(pasaFiltros); 
+                hV=fil.some(v=>(v.estado||'VISITADO')==='VISITADO'); 
+                hW=fil.some(v=>v.estado==='WISHLIST'); 
+            } 
+            const opV = sateliteActivo ? 0.05 : 0.35;
+            const opW = sateliteActivo ? 0.05 : 0.15;
+            const opN = sateliteActivo ? 0.05 : 0.7;
+
+            if(hV) return {color:c,weight:3,fillColor:c,fillOpacity:opV,className:'poligono-vidrio'}; 
+            else if(hW) return {color:"#00FFFF",weight:2,fillColor:"#00FFFF",fillOpacity:opW,className:'poligono-wishlist'}; 
+            else return {color:"#444",weight:2,fillColor:"#111",fillOpacity:opN,className:'poligono-raspadita'}; 
+        }, 
+        onEachFeature:function(fP,lP){ const nPr=fP.properties.NOMBPROV; const c=coloresChichaPremium[nPr.length%coloresChichaPremium.length]; lP.bindTooltip(`<span style="color:${c};">${nPr}</span>`,{permanent:true,direction:'center',className:'etiqueta-provincia',interactive:false}); lP.on('click',()=>abrirInformacionProvincia(nPr,c)); } 
+    }).addTo(mapa); 
+    mapa.fitBounds(L.geoJSON(f).getBounds()); mapa.removeLayer(capaNacional); tituloMapa.style.display='none'; tituloDepartamento.innerText=nD; tituloDepartamento.style.display='block'; btnVolver.style.display='inline-block'; actualizarProgresoDepartamental(nD.trim().toUpperCase()); abrirInformacionProvincia(nP, coloresChichaPremium[nP.length%coloresChichaPremium.length]); 
+};
 
 // 10. CONTROLADORES PRINCIPALES DE SESIÓN
 if(btnIngresar) btnIngresar.onclick = async () => { if(audioAmbiental.paused){ audioAmbiental.play().catch(()=>{}); audioAmbiental.pause(); } const em=inputEmail.value.trim(); const pw=inputPass.value; if(!em||!pw) return avatarGuia.src='./assets/img/mascota-triste.webp'; try { await signInWithEmailAndPassword(auth, em, pw); avatarGuia.src='./assets/img/mascota-feliz.webp'; setTimeout(()=>{ pantallaAcceso.style.opacity='0'; setTimeout(()=>{ pantallaAcceso.style.display='none'; pantallaCarga.style.display='flex'; contenedorMapa.style.display='block'; tituloMapa.style.display='block'; contenedorProgreso.style.display='block'; reproducirMusicaAleatoria(); inicializarMapa(); },800); },600); } catch(e){ avatarGuia.src='./assets/img/mascota-triste.webp'; inputPass.value=''; } };
 btnMute.onclick = () => { if(audioAmbiental.paused) audioAmbiental.play().catch(()=>{}); audioAmbiental.muted=!audioAmbiental.muted; btnMute.textContent=audioAmbiental.muted?'🔇':'🔊'; };
 const btnActualizar=document.getElementById('btn-actualizar-app'); if(btnActualizar) btnActualizar.onclick=()=>{ if('caches' in window){ caches.keys().then(ns=>Promise.all(ns.map(n=>caches.delete(n))).then(()=>window.location.reload(true))); }else window.location.reload(true); };
 if(btnCerrarSesion) btnCerrarSesion.onclick=async()=>{ await signOut(auth); window.location.reload(); };
-
 
 onAuthStateChanged(auth, (u) => {
     if(u) { 
@@ -483,7 +606,7 @@ onAuthStateChanged(auth, (u) => {
     } else { 
         pantallaAcceso.style.display='flex'; 
         pantallaAcceso.style.opacity='1'; 
-        pantallaCarga.style.display='none'; // <--- ESTA ES LA LÍNEA QUE FALTABA
+        pantallaCarga.style.display='none'; 
         contenedorMapa.style.display='none'; 
         tituloMapa.style.display='none'; 
         contenedorProgreso.style.display='none'; 

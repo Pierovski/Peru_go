@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Perú Go - Premium</title>
-    <link rel="manifest" href="manifest.json?v=10">
+    <link rel="manifest" href="manifest.json?v=11">
     <meta name="theme-color" content="#0a1118">
     <link rel="apple-touch-icon" href="./icono-192.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="style.css?v=20">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Paytone+One&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -30,25 +30,26 @@
 
     <div id="pantalla-carga" class="pantalla-full"><img src="./assets/img/mascota-explora.webp" alt="Cargando" class="img-flotante"><div class="spinner-chicha"></div><p class="instruccion" style="margin-top: 15px;">Sincronizando...</p></div>
 
-    <div id="pantalla-buscador" class="pantalla-full glass-modal" style="display: none; opacity: 0; padding-top: 50px;">
-        <button onclick="cerrarBuscador()" class="btn-cerrar-esquina">✖</button>
-        <h2 class="titulo-chicha" style="color: #FF1493;">BUSCADOR</h2>
-        <input type="text" id="input-buscador" class="input-chicha" placeholder="Lugar, obra, estadio..." style="width: 85%; max-width: 400px; text-align: center;">
-        <div id="resultados-buscador" style="width: 85%; max-width: 400px; margin-top: 20px; overflow-y: auto; max-height: 65vh;"></div>
-    </div>
-
     <div id="fondo-dashboard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.7); z-index: 9999;"></div>
+    
+    <div id="pantalla-buscador" class="dashboard-bento" style="display: none;">
+        <div class="swipe-indicador"></div>
+        <button onclick="cerrarBuscador()" class="btn-cerrar-esquina-bento">✖</button>
+        <h2 class="titulo-chicha" style="color: #FF1493; text-align: center;">BUSCADOR</h2>
+        <div style="display: flex; justify-content: center;"><input type="text" id="input-buscador" class="input-chicha" placeholder="Lugar, obra, estadio..." style="width: 100%; max-width: 400px; text-align: center;"></div>
+        <div id="resultados-buscador" style="margin-top: 15px; overflow-y: auto; max-height: 50vh; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;"></div>
+    </div>
     
     <div id="pantalla-filtros" class="dashboard-bento">
         <div class="swipe-indicador"></div><button id="btn-cerrar-filtros" class="btn-cerrar-esquina-bento">✖</button>
-        <h2 class="titulo-chicha" style="color: #00FFFF; font-size: 1.2rem;">FILTROS & RUTA DEL SABOR</h2>
+        <h2 class="titulo-chicha" style="color: #00FFFF; font-size: 1.2rem; text-align:center;">FILTROS & RUTA DEL SABOR</h2>
         <div class="botonera-opciones" id="filtro-categoria" style="justify-content: center; margin-bottom: 15px;">
             <div class="btn-opcion seleccionado" data-valor="TODOS">🌍 Todos</div><div class="btn-opcion" data-valor="TRABAJO">🚜 Trabajo</div>
             <div class="btn-opcion" data-valor="PERSONAL">🍹 Personal</div><div class="btn-opcion" data-valor="FUTBOL">⚽ Fútbol</div>
             <div class="btn-opcion" data-valor="SABOR" style="border-color:#FFD700; color:#FFD700;">🍜 Ruta Sabor</div>
         </div>
-        <div style="display: flex; gap: 10px; margin-bottom: 25px;"><input type="date" id="filtro-fecha-inicio" class="input-chicha"><input type="date" id="filtro-fecha-fin" class="input-chicha"></div>
-        <div style="display: flex; gap: 10px;"><button id="btn-limpiar-filtros" class="btn-chicha btn-peligro">Limpiar</button><button id="btn-aplicar-filtros" class="btn-chicha">Aplicar</button></div>
+        <div style="display: flex; gap: 10px; margin-bottom: 25px; max-width: 400px; margin-left: auto; margin-right: auto;"><input type="date" id="filtro-fecha-inicio" class="input-chicha"><input type="date" id="filtro-fecha-fin" class="input-chicha"></div>
+        <div style="display: flex; gap: 10px; max-width: 400px; margin-left: auto; margin-right: auto;"><button id="btn-limpiar-filtros" class="btn-chicha btn-peligro">Limpiar</button><button id="btn-aplicar-filtros" class="btn-chicha">Aplicar</button></div>
     </div>
 
     <div id="pantalla-dashboard" class="dashboard-bento">
@@ -59,13 +60,22 @@
         <div class="botones-sistema-compactos"><button id="btn-backup" class="btn-sistema">💾 Respaldar</button><input type="file" id="input-importar" accept=".json" style="display: none;"><button id="btn-importar" class="btn-sistema">📂 Restaurar</button><button id="btn-cerrar-sesion" class="btn-sistema btn-sistema-peligro">🚪 Salir</button></div>
     </div>
 
-    <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(10, 17, 24, 0.95); z-index: 9998; justify-content: center; align-items: center;">
+    <!-- CAMBIADO PARA EL EFECTO CRISTAL: Fondo más transparente y con blur sutil -->
+    <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0, 0, 0, 0.4); z-index: 9998; justify-content: center; align-items: center; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
         <div class="info-contenido" id="panel-tarjeta-viajes">
             <div class="swipe-indicador"></div><button id="btn-cerrar-info" class="btn-cerrar-esquina-bento" style="background: rgba(255,20,147,0.2); border-color:#FF1493; color:white;">✖</button>
             <h2 id="info-provincia-titulo" class="titulo-chicha">PROVINCIA</h2>
             <div id="rango-provincia" style="color: #FFD700; font-size: 0.9rem; font-family: 'Paytone One', sans-serif; margin-bottom: 15px; letter-spacing: 1px;">🎒 Forastero</div>
-            <div id="contenedor-sello" style="text-align:center;"></div>
-            <div id="info-lugares"></div>
+            
+            <div id="tabs-visitas" style="display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
+                <button class="btn-tab-visita activo" data-tab="TODAS">🌍 Todas</button>
+                <button class="btn-tab-visita" data-tab="TRABAJO">🚜 Trabajo</button>
+                <button class="btn-tab-visita" data-tab="PERSONAL">🍹 Personal</button>
+                <button class="btn-tab-visita" data-tab="FUTBOL">⚽ Fútbol</button>
+            </div>
+
+            <div id="info-lugares" class="timeline-container"></div>
+            
             <button id="btn-mostrar-formulario" class="btn-chicha" style="margin-top: 15px;">+ Añadir Expedición o Wishlist</button>
             
             <div id="formulario-registro" style="display: none; margin-top: 20px; border-top: 1px dashed rgba(255,20,147,0.5); padding-top: 20px;">
@@ -159,7 +169,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="firebase.js"></script>
-    <script type="module" src="app.js?v=18"></script>
+    <script type="module" src="app.js?v=20"></script>
     <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }</script>
 </body>
 </html>

@@ -32,7 +32,26 @@ body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Mon
 @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes fadeOut { to { opacity: 0; } }
 
 .swipe-indicador { width: 40px; height: 5px; background: rgba(255,255,255,0.3); border-radius: 10px; margin: 0 auto 15px; cursor: grab; }
-.info-contenido { width: 90%; max-width: 600px; height: 85vh; background: #0c1116; border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; position: relative; padding: 20px 25px; overflow-y: auto; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9); transition: transform 0.3s; }
+
+/* PANEL MODIFICADO A GLASSMORPHISM (EFECTO CRISTAL) */
+.info-contenido { 
+    width: 90%; 
+    max-width: 600px; 
+    height: 85vh; 
+    background: rgba(12, 17, 22, 0.55); /* Color oscuro base semi-transparente */
+    backdrop-filter: blur(25px); /* El verdadero efecto cristal */
+    -webkit-backdrop-filter: blur(25px); 
+    border: 1px solid rgba(255,255,255,0.1); 
+    border-top: 1px solid rgba(255,255,255,0.3); /* Reflejo superior */
+    border-left: 1px solid rgba(255,255,255,0.2); /* Reflejo lateral */
+    border-radius: 30px; 
+    position: relative; 
+    padding: 20px 25px; 
+    overflow-y: auto; 
+    text-align: center; 
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.05); /* Sombra exterior dura + brillo interior */
+    transition: transform 0.3s; 
+}
 #info-lugares { scroll-snap-type: y mandatory; overflow-y: auto; padding-bottom: 10px; }
 
 .dashboard-bento { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(10, 15, 20, 0.85); backdrop-filter: blur(25px); border-radius: 30px 30px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); z-index: 10000; transform: translateY(100%); transition: transform 0.4s; padding: 15px 15px 25px; box-sizing: border-box; border-top: 1px solid rgba(255,255,255,0.1); max-height: 85vh; overflow-y: auto; }
@@ -50,10 +69,10 @@ body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Mon
 
 .etiqueta-provincia { background: transparent !important; border: none !important; box-shadow: none !important; font-family: 'Paytone One', sans-serif; font-size: clamp(0.6rem, 1.5vw, 0.75rem) !important; text-shadow: 2px 2px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000, 1px 1px 0px #000; text-transform: uppercase; text-align: center; } .leaflet-tooltip-left::before, .leaflet-tooltip-right::before, .leaflet-tooltip-top::before, .leaflet-tooltip-bottom::before { display: none !important; }
 
-/* MAPA PREMIUM (RASPADITA Y WISHLIST) */
+/* MAPA PREMIUM - SE ELIMINÓ EL FILL FORZADO PARA QUE EL SATÉLITE FUNCIONE */
 .poligono-vidrio { filter: drop-shadow(0px 10px 15px rgba(0, 0, 0, 0.9)); transition: fill-opacity 0.3s ease; }
-.poligono-raspadita { stroke: #555; stroke-width: 1; fill: #222; fill-opacity: 0.8; transition: fill 0.5s ease; } /* Zonas grises por explorar */
-.poligono-wishlist { stroke: #00FFFF; stroke-width: 2; fill: #00FFFF; fill-opacity: 0.15; stroke-dasharray: 5,5; animation: dash 10s linear infinite; } @keyframes dash { to { stroke-dashoffset: 100; } }
+.poligono-raspadita { stroke: #555; stroke-width: 1; transition: fill-opacity 0.3s ease; } 
+.poligono-wishlist { stroke-dasharray: 5,5; animation: dash 10s linear infinite; } @keyframes dash { to { stroke-dashoffset: 100; } }
 
 .input-transparente { width: 100%; background: transparent; border: none; color: white; text-align: center; font-size: 1.2rem; outline: none; }
 .input-chicha, .file-chicha { width: 100%; box-sizing: border-box; margin-bottom: 10px; background: rgba(0,0,0,0.5); color: #FFF; border: 1px solid rgba(255, 20, 147, 0.5); padding: 10px; border-radius: 8px; outline: none; color-scheme: dark; } .input-chicha:focus { border-color: #00FFFF; }
@@ -65,12 +84,37 @@ body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Mon
 .btn-link, .btn-postal { display: inline-block; margin-top: 10px; padding: 6px 10px; background: rgba(255, 215, 0, 0.05); color: #FFD700; border: 1px solid rgba(255, 215, 0, 0.5); border-radius: 5px; text-decoration: none; font-size: 0.7rem; cursor: pointer; } .btn-postal { color: #FF1493; border-color: #FF1493; margin-left: 5px; }
 
 .btn-eliminar { position: absolute; bottom: 15px; right: 15px; background: transparent; border: none; font-size: 1.1rem; cursor: pointer; opacity: 0.6; filter: drop-shadow(0 0 2px red); } .btn-editar { position: absolute; bottom: 15px; right: 50px; background: transparent; border: none; font-size: 1.1rem; cursor: pointer; opacity: 0.6; filter: drop-shadow(0 0 2px cyan); } 
-.botonera-opciones { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .btn-opcion { background: rgba(255,255,255,0.08); color: #ddd; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 1.1rem; border: 1px solid transparent; } .btn-opcion.seleccionado { background: rgba(255,215,0,0.15); color: #FFF; border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.6); transform: scale(1.05); }
+
+/* FILTROS MEJORADOS Y COMPACTOS */
+.botonera-opciones { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; justify-content: center; } 
+.btn-opcion { background: rgba(255,255,255,0.08); color: #ddd; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; border: 1px solid transparent; } 
+.btn-opcion.seleccionado { background: rgba(255,215,0,0.15); color: #FFF; border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.6); transform: scale(1.05); }
+
 .fila-estrellas { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; color: rgba(0,255,255,0.8); font-size: 0.75rem; } .contenedor-estrellas { font-size: 1.3rem; color: #444; cursor: pointer; user-select: none; } .contenedor-estrellas span.activa { color: #FFD700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.8); }
 .txt-dorado { color: rgba(255,215,0,0.8); font-size: 0.75rem; margin: 5px 0; text-align: left; }
 
-/* SELLOS Y CHINCHES */
-.sello-pasaporte { display: inline-block; border: 3px solid #00FA9A; color: #00FA9A; padding: 10px 20px; border-radius: 10px; font-family: 'Paytone One'; font-size: 1.2rem; transform: rotate(-5deg); opacity: 0.8; margin-bottom: 15px; letter-spacing: 2px; }
 .chinche-premium { font-size: 1.8rem; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.8)); text-align: center; } .tooltip-chinche { background: rgba(10,15,20,0.9) !important; color: #FFF !important; border: 1px solid #00FFFF !important; border-radius: 8px !important; }
 .btn-flotante-gigante { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 10020; background: linear-gradient(90deg, #00FA9A, #00FFFF); color: black; border: none; padding: 15px 30px; border-radius: 30px; font-family: 'Paytone One', sans-serif; font-size: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: pointer; }
 .resultado-item { background: rgba(255, 255, 255, 0.05); border-left: 3px solid #00FFFF; padding: 15px; margin-bottom: 10px; border-radius: 8px; text-align: left; }
+
+/* =========================================
+   HYBRID UI: TABS, TIMELINE Y TARJETAS
+   ========================================= */
+.btn-tab-visita { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #aaa; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; white-space: nowrap; transition: all 0.3s ease; font-family: 'Montserrat', sans-serif; font-weight: bold; }
+.btn-tab-visita.activo { background: rgba(0, 255, 255, 0.15); border-color: #00FFFF; color: #FFF; box-shadow: 0 0 10px rgba(0,255,255,0.4); }
+
+.timeline-container { position: relative; padding-left: 20px; text-align: left; scroll-snap-type: y mandatory; overflow-y: auto; padding-bottom: 10px;}
+.timeline-container::before { content: ''; position: absolute; left: 5px; top: 10px; bottom: 0; width: 2px; background: linear-gradient(to bottom, #00FFFF, #FF1493, transparent); }
+
+.timeline-item { position: relative; margin-bottom: 15px; scroll-snap-align: start; }
+.timeline-item::before { content: ''; position: absolute; left: -19px; top: 20px; width: 10px; height: 10px; border-radius: 50%; background: #00FFFF; box-shadow: 0 0 8px #00FFFF; z-index: 2; }
+
+.card-visual { background: rgba(255,255,255,0.03); border-radius: 15px; overflow: hidden; position: relative; transition: transform 0.3s; border: 1px solid rgba(255,255,255,0.1); }
+.card-visual:active { transform: scale(0.98); }
+.card-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; filter: brightness(0.35) contrast(1.1); z-index: 0; transition: filter 0.3s; }
+.card-visual:hover .card-bg { filter: brightness(0.5); }
+.card-content { position: relative; z-index: 1; padding: 15px; }
+
+.card-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.card-title { margin: 0; font-size: 1.05rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
+.card-date { font-size: 0.7rem; color: #eee; text-shadow: 0 1px 2px rgba(0,0,0,0.9); }
