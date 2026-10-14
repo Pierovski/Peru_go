@@ -1,32 +1,68 @@
-const CACHE_NAME = 'perugo-cache-v6.1';
+const CACHE_NAME = 'perugo-cache-v7.0';
 const urlsToCache = [
-    './', './index.html', './style.css', './app.js', './manifest.json',
-    './data/peru_departamental_simple.geojson', './data/peru_provincial_simple.geojson',
-    './assets/img/fondo.jpg', './assets/img/mascota-hola.webp', './assets/img/mascota-explora.webp',
-    './assets/img/mascota-feliz.webp', './assets/img/mascota-triste.webp',
-    './assets/audio/musica-uno.mp3', './assets/audio/musica-dos.mp3', './assets/audio/musica-tres.mp3'
+    './',
+    './index.html',
+    './style.css',
+    './app.js',
+    './manifest.json',
+    './data/peru_departamental_simple.geojson',
+    './data/peru_provincial_simple.geojson',
+    './assets/img/fondo.jpg',
+    './assets/img/mascota-hola.webp',
+    './assets/img/mascota-explora.webp',
+    './assets/img/mascota-feliz.webp',
+    './assets/img/mascota-triste.webp',
+    './assets/audio/musica-uno.mp3',
+    './assets/audio/musica-dos.mp3',
+    './assets/audio/musica-tres.mp3'
 ];
 
 self.addEventListener('install', event => {
-    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+    self.skipWaiting();
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+    );
 });
 
 self.addEventListener('activate', event => {
-    event.waitUntil(caches.keys().then(cacheNames => {
-        return Promise.all(cacheNames.map(cacheName => {
-            if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
-        }));
-    }));
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
 });
 
-// Corrección: Estrategia Stale-While-Revalidate (Muestra caché pero actualiza en segundo plano)
 self.addEventListener('fetch', event => {
+    // 1. Ignorar métodos que no sean GET (como POST a ImgBB o Firestore)
+    if (event.request.method !== 'GET') return;
+
+    const url = new URL(event.request.url);
+
+    // 2. No cachear llamadas a APIs dinámicas externas
+    const dominiosExcluidos = [
+        'firestore.googleapis.com',
+        'identitytoolkit.googleapis.com',
+        'api.imgbb.com',
+        'api.open-meteo.com',
+        'server.arcgisonline.com'
+    ];
+    if (dominiosExcluidos.some(d => url.hostname.includes(d))) return;
+
+    // 3. Estrategia Stale-While-Revalidate ignorando query strings de versión (?v=21)
     event.respondWith(
-        caches.match(event.request).then(cachedResponse => {
+        caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
             const fetchPromise = fetch(event.request).then(networkResponse => {
-                caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse.clone()));
+                if (networkResponse && networkResponse.status === 200) {
+                    const responseClone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+                }
                 return networkResponse;
-            }).catch(err => console.error("Error de red en SW:", err));
+            }).catch(() => cachedResponse);
+
             return cachedResponse || fetchPromise;
         })
     );
