@@ -1,10 +1,8 @@
 "use strict";
 
-// 1. IMPORTACIONES FIREBASE
 import { db, auth, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "./firebase.js";
 const IMGBB_API_KEY = "055cde6238b2cefe13e31dc43f2b2570"; 
 
-// 2. REFERENCIAS AL DOM
 const tituloDepartamento = document.getElementById('titulo-departamento');
 const btnVolver = document.getElementById('btn-volver');
 const pantallaInfo = document.getElementById('pantalla-info');
@@ -26,6 +24,10 @@ const pantallaAcceso = document.getElementById('pantalla-acceso');
 const contenedorMapa = document.getElementById('map');
 
 const barraNavegacion = document.getElementById('contenedor-bottom-bar');
+const btnToggleRadial = document.getElementById('btn-toggle-radial');
+const dockMenuRadial = document.getElementById('dock-menu-radial');
+const svgTriggerIcon = document.getElementById('svg-trigger-icon');
+
 const btnMute = document.getElementById('btn-mute');
 const svgAudioOn = document.getElementById('svg-audio-on');
 const svgAudioOff = document.getElementById('svg-audio-off');
@@ -59,14 +61,12 @@ const formRegistro = document.getElementById('formulario-registro');
 const btnGuardarRegistro = document.getElementById('btn-guardar-registro');
 const btnCancelarEdicion = document.getElementById('btn-cancelar-edicion');
 const mensajeCarga = document.getElementById('mensaje-carga');
-const inputHiddenTipo = document.getElementById('nuevo-tipo');
 const camposTrabajo = document.getElementById('campos-trabajo');
 const camposPersonal = document.getElementById('campos-personal');
 const camposFutbol = document.getElementById('campos-futbol');
 const btnWrapped = document.getElementById('btn-wrapped');
 const btnRuleta = document.getElementById('btn-ruleta');
 
-// 3. ESTADO GLOBAL
 let diccCentrosProvincias = {};
 let idEdicionActual = null;
 let seleccionClima = '';
@@ -92,6 +92,7 @@ let seleccionandoUbicacion = false;
 let markerDraggable = null;
 let mapaYaInicializado = false;
 let tabVisitaActiva = 'TODAS';
+let menuRadialAbierto = false;
 
 const coloresChichaPremium = [ "#FF1493", "#00FA9A", "#FFD700", "#00FFFF", "#FF4500", "#9400D3" ];
 const audios = [ './assets/audio/musica-uno.mp3', './assets/audio/musica-dos.mp3', './assets/audio/musica-tres.mp3' ];
@@ -102,11 +103,10 @@ const desafiosNomadas = [
     "Prueba el plato o bebida más rara que encuentres en el mercado local.",
     "Busca el punto más alto del lugar y toma una foto panorámica.",
     "Pregúntale a un local sobre un mito o leyenda de esta zona.",
-    "Tómate un selfie curioso con el letrero de bienvenida o la Plaza de Armas.",
+    "Tómate un selfie curioso con letrero de bienvenida o Plaza de Armas.",
     "Encuentra una calle sin asfaltar y anota algo que te llame la atención."
 ];
 
-// 4. UTILIDADES, FEEDBACK HÁPTICO, EXIF Y FILTROS
 function feedbackHaptico(ms = 12) {
     if (navigator.vibrate) {
         try { navigator.vibrate(ms); } catch (e) {}
@@ -174,7 +174,41 @@ function mostrarSkeletonLoading() {
     contenedorLugares.innerHTML = `<div class="esqueleto" style="height: 85px; margin: 10px 0;"></div>`;
 }
 
-// INICIALIZAR SEGMENTED CONTROLS Y CHIPS (VINCULADOS A INPUTS OCULTOS)
+function cerrarMenuRadial() {
+    if (!menuRadialAbierto) return;
+    menuRadialAbierto = false;
+    if (dockMenuRadial) dockMenuRadial.classList.remove('activo');
+    if (btnToggleRadial) btnToggleRadial.classList.remove('abierto');
+    if (fondoDashboard) fondoDashboard.style.display = 'none';
+}
+
+if (btnToggleRadial) {
+    btnToggleRadial.onclick = (e) => {
+        e.stopPropagation();
+        feedbackHaptico(15);
+        menuRadialAbierto = !menuRadialAbierto;
+        dockMenuRadial.classList.toggle('activo', menuRadialAbierto);
+        btnToggleRadial.classList.toggle('abierto', menuRadialAbierto);
+        if (menuRadialAbierto) {
+            fondoDashboard.style.display = 'block';
+            fondoDashboard.style.zIndex = '1000';
+        } else {
+            fondoDashboard.style.display = 'none';
+        }
+    };
+}
+
+if (fondoDashboard) {
+    const fondoOriginalClick = fondoDashboard.onclick;
+    fondoDashboard.onclick = () => {
+        cerrarMenuRadial();
+        window.cerrarDashboard();
+        window.cerrarFiltros();
+        window.cerrarBuscador();
+        if (fondoOriginalClick) fondoOriginalClick();
+    };
+}
+
 function vincularGrupoBotones(contenedorId, inputHiddenId, claseActiva, callbackCambio = null) {
     const cont = document.getElementById(contenedorId);
     const input = document.getElementById(inputHiddenId);
@@ -214,7 +248,6 @@ function setValorGrupoBotones(contenedorId, inputHiddenId, valor, claseActiva) {
     });
 }
 
-// CONSULTA ALTIMÉTRICA Z CON OPEN-METEO
 async function obtenerAltitudZ(lat, lng, silencioso = false) {
     const inputAlt = document.getElementById('nueva-altitud');
     try {
@@ -232,7 +265,6 @@ async function obtenerAltitudZ(lat, lng, silencioso = false) {
     return null;
 }
 
-// EXTRACCIÓN AUTOMÁTICA DE METADATOS EXIF
 async function extraerMetadatosEXIF(file) {
     if (typeof window.exifr === 'undefined' || !file) return;
     try {
@@ -351,13 +383,6 @@ function comprobarEfemerides() {
         }
     }));
     if (hallado) setTimeout(() => mostrarToast(`Cápsula del Tiempo: Hace ${anios} año(s) estabas en ${hallado.nombre} 🕰️`, 'success'), 2000);
-}
-
-// =========================================
-// 5. INICIALIZACIÓN MAPA Y GIS
-// =========================================
-function insertarTarjetaLugarSegura(htmlString) {
-    contenedorLugares.insertAdjacentHTML('beforeend', htmlString);
 }
 
 document.querySelectorAll('.btn-opcion:not(#filtro-categoria .btn-opcion)').forEach(btn => {
@@ -534,7 +559,7 @@ function inicializarMapa() {
         dibujarMapaNacional();
         actualizarProgresoGlobal();
         pantallaCarga.style.display = 'none';
-        if (barraNavegacion) barraNavegacion.style.display = 'grid';
+        if (barraNavegacion) barraNavegacion.style.display = 'flex';
         if (btnMute) btnMute.style.display = 'flex';
         comprobarEfemerides(); 
     }).catch(err => {
@@ -589,12 +614,10 @@ if (btnCapas) {
         if (capaProvincias) {
             capaProvincias.eachLayer(l => capaProvincias.resetStyle(l));
         }
+        cerrarMenuRadial();
     }; 
 }
 
-// =========================================
-// 6. FILTROS Y NAVEGACIÓN
-// =========================================
 document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(btn => {
     btn.onclick = () => {
         feedbackHaptico(10);
@@ -604,17 +627,19 @@ document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(btn => {
 });
 
 window.cerrarFiltros = () => {
-    pantallaFiltros.style.transform = '';
     pantallaFiltros.classList.remove('activo');
     setTimeout(() => {
         pantallaFiltros.style.display = 'none';
         fondoDashboard.style.display = 'none';
-    }, 400);
+    }, 350);
 };
+
 if (btnFiltro) {
     btnFiltro.onclick = () => {
         feedbackHaptico(12);
+        cerrarMenuRadial();
         fondoDashboard.style.display = 'block';
+        fondoDashboard.style.zIndex = '9999';
         pantallaFiltros.style.display = 'block';
         setTimeout(() => pantallaFiltros.classList.add('activo'), 10);
     };
@@ -708,6 +733,7 @@ function calcRacha() {
 if (btnDashboard) {
     btnDashboard.onclick = () => {
         feedbackHaptico(12);
+        cerrarMenuRadial();
         let tP = 0;
         let tPer = 0;
         let tot = 0;
@@ -736,6 +762,7 @@ if (btnDashboard) {
             <div class="bento-item bento-full" style="border-color:rgba(255,255,255,0.2);"><div class="bento-titulo">Estadios & Canchas</div><div class="bento-valor" style="color:#FFF;">${est.length} ⚽</div><div style="font-size:0.75rem; color:#ddd;">${est.join(', ') || 'Aún no hay canchas registradas.'}</div></div>
         `;
         fondoDashboard.style.display = 'block';
+        fondoDashboard.style.zIndex = '9999';
         pantallaDashboard.style.display = 'block';
         setTimeout(() => pantallaDashboard.classList.add('activo'), 10);
     };
@@ -787,28 +814,17 @@ if (btnWrapped) {
 }
 
 window.cerrarDashboard = () => {
-    pantallaDashboard.style.transform = '';
     pantallaDashboard.classList.remove('activo');
     setTimeout(() => {
         pantallaDashboard.style.display = 'none';
         fondoDashboard.style.display = 'none';
-    }, 400);
+    }, 350);
 };
 if (btnCerrarDashboard) btnCerrarDashboard.onclick = window.cerrarDashboard;
-if (fondoDashboard) {
-    fondoDashboard.onclick = () => {
-        window.cerrarDashboard();
-        window.cerrarFiltros();
-        window.cerrarBuscador();
-    };
-}
 habilitarSwipeToClose('#pantalla-dashboard', window.cerrarDashboard);
 habilitarSwipeToClose('.info-contenido', () => { if (btnCerrarInfo) btnCerrarInfo.click(); });
 habilitarSwipeToClose('#visor-fotos', () => { if (window.cerrarVisorFotos) window.cerrarVisorFotos(); });
 
-// =========================================
-// 7. GENERADOR POSTAL INSTAGRAM
-// =========================================
 window.generarPostalIG = async (id, prov) => {
     feedbackHaptico(15);
     mostrarToast("Generando Postal...", "success");
@@ -845,16 +861,13 @@ window.generarPostalIG = async (id, prov) => {
     }
 };
 
-// =========================================
-// 8. CRUD Y GEOLOCALIZACIÓN Z
-// =========================================
 document.getElementById('btn-gps').onclick = (e) => {
     e.preventDefault();
     feedbackHaptico(15);
     const txtBtn = document.getElementById('txt-btn-gps');
     if (txtBtn) txtBtn.innerText = "Buscando...";
     if (!navigator.geolocation) {
-        mostrarToast("GPS no disponible en este dispositivo", "error");
+        mostrarToast("GPS no disponible", "error");
         if (txtBtn) txtBtn.innerText = "Capturar GPS";
         return;
     }
@@ -1014,15 +1027,14 @@ function renderizarLugares(nomL, col) {
 
         let det = '';
         if (v.tipo === 'TRABAJO') {
-            det = `<p style="font-size:0.8rem; text-shadow:0 1px 2px #000; margin:6px 0;">${v.tipoProyecto ? `<b>Especialidad:</b> ${escaparHTML(v.tipoProyecto)}<br>` : ''}<b>Contratista:</b> <span style="color:#FFD700;">${s(v.empresa)}</span> ${escaparHTML(v.clima || '')}</p>`;
+            det = `<p style="margin:6px 0;">${v.tipoProyecto ? `<b>Especialidad:</b> ${escaparHTML(v.tipoProyecto)}<br>` : ''}<b>Contratista:</b> <span style="color:#FFD700;">${s(v.empresa)}</span> ${escaparHTML(v.clima || '')}</p>`;
         } else if (v.tipo === 'FUTBOL') {
-            det = `<p style="font-size:0.8rem; text-shadow:0 1px 2px #000; margin:6px 0;">${v.estadio ? `<b>Estadio:</b> ${escaparHTML(v.estadio)}<br>` : ''}${v.partido ? `<b>Partido:</b> ${escaparHTML(v.partido)}<br>` : ''}<b>Ambiente:</b> <span style="color:#FFD700;">${s(v.ambiente)}</span></p>`;
+            det = `<p style="margin:6px 0;">${v.estadio ? `<b>Estadio:</b> ${escaparHTML(v.estadio)}<br>` : ''}${v.partido ? `<b>Partido:</b> ${escaparHTML(v.partido)}<br>` : ''}<b>Ambiente:</b> <span style="color:#FFD700;">${s(v.ambiente)}</span></p>`;
         } else {
-            det = `<p style="font-size:0.8rem; text-shadow:0 1px 2px #000; margin:6px 0;">${v.platoDestacado ? `<b>Plato:</b> ${escaparHTML(v.platoDestacado)}<br>` : ''}<b>Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span><br><b>Hospedaje:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${escaparHTML(v.transporte || '')}</p>`;
+            det = `<p style="margin:6px 0;">${v.platoDestacado ? `<b>Plato:</b> ${escaparHTML(v.platoDestacado)}<br>` : ''}<b>Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span><br><b>Hospedaje:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${escaparHTML(v.transporte || '')}</p>`;
         }
-        if (v.contacto) det += `<p style="font-size:0.75rem; color:#00FFFF; text-shadow:0 1px 2px #000; margin:4px 0;">📞 <b>Directorio:</b> ${escaparHTML(v.contacto)}</p>`;
+        if (v.contacto) det += `<p style="color:#00FFFF; margin:4px 0;">📞 <b>Directorio:</b> ${escaparHTML(v.contacto)}</p>`;
 
-        // Action Footer estructurado (reemplaza botones flotantes superpuestos)
         const footerAcciones = `
             <div class="card-action-footer">
                 <div class="card-links-group">
@@ -1055,7 +1067,7 @@ function renderizarLugares(nomL, col) {
                         <div class="tarjeta-body" id="body-${escaparHTML(v.id)}">
                             <div style="margin-bottom:6px;">${tT} <span class="tag-info tag-compania">${escaparHTML(v.compania || 'Solo')}</span></div>
                             ${det}
-                            ${v.info ? `<p style="color:#ddd; margin-top:8px; text-shadow: 0 1px 3px #000; font-size: 0.82rem; line-height:1.4;"><em>${escaparHTML(v.info)}</em></p>` : ''}
+                            ${v.info ? `<p style="margin-top:8px; line-height:1.4;"><em>${escaparHTML(v.info)}</em></p>` : ''}
                             ${fH}
                             ${footerAcciones}
                         </div>
@@ -1378,9 +1390,6 @@ function actualizarProgresoDepartamental(nD) {
     }
 }
 
-// =========================================
-// 9. RESPALDOS, BUSCADOR Y SESIÓN
-// =========================================
 if (btnBackup) {
     btnBackup.onclick = () => {
         feedbackHaptico(12);
@@ -1428,7 +1437,9 @@ if (btnImportar && inputImportar) {
 if (btnBuscar) {
     btnBuscar.onclick = () => { 
         feedbackHaptico(12);
+        cerrarMenuRadial();
         fondoDashboard.style.display = 'block'; 
+        fondoDashboard.style.zIndex = '9999';
         pantallaBuscador.style.display = 'block'; 
         setTimeout(() => pantallaBuscador.classList.add('activo'), 10); 
         inputBuscador.focus(); 
@@ -1436,14 +1447,13 @@ if (btnBuscar) {
 }
 
 window.cerrarBuscador = () => { 
-    pantallaBuscador.style.transform = ''; 
     pantallaBuscador.classList.remove('activo'); 
     setTimeout(() => { 
         pantallaBuscador.style.display = 'none'; 
         fondoDashboard.style.display = 'none'; 
         inputBuscador.value = ''; 
         resultadosBuscador.innerHTML = ''; 
-    }, 400); 
+    }, 350); 
 };
 habilitarSwipeToClose('#pantalla-buscador', window.cerrarBuscador);
 
@@ -1489,9 +1499,6 @@ window.volarAProvincia = (nP, nD) => {
     abrirInformacionProvincia(nP, coloresChichaPremium[nP.length % coloresChichaPremium.length]); 
 };
 
-// =========================================
-// 10. CONTROLADORES PRINCIPALES DE SESIÓN
-// =========================================
 if (btnIngresar) {
     btnIngresar.onclick = async () => {
         feedbackHaptico(15);
@@ -1542,14 +1549,20 @@ if (btnMute) {
 
 const btnActualizar = document.getElementById('btn-actualizar-app');
 if (btnActualizar) {
-    btnActualizar.onclick = () => {
+    btnActualizar.onclick = async () => {
         feedbackHaptico(15);
         mostrarToast("Limpiando caché y actualizando...", "success");
-        if ('caches' in window) {
-            caches.keys().then(ns => Promise.all(ns.map(n => caches.delete(n))).then(() => window.location.reload()));
-        } else {
-            window.location.reload();
-        }
+        try {
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (let reg of regs) await reg.unregister();
+            }
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+        } catch (e) {}
+        window.location.reload();
     };
 }
 
