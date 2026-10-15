@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Perú Go - Premium</title>
-    <link rel="manifest" href="manifest.json?v=25">
-    <meta name="theme-color" content="#0a1118">
+    <link rel="manifest" href="manifest.json?v=32">
+    <meta name="theme-color" content="#070b10">
     <link rel="apple-touch-icon" href="./assets/img/mascota-feliz.webp">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="style.css?v=32">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;800&family=Montserrat:wght@400;600;700;800;900&family=Paytone+One&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -19,12 +19,14 @@
     
     <!-- PANTALLA DE LOGIN -->
     <div id="pantalla-acceso" class="pantalla-full">
-        <div class="acceso-flotante glass-modal" style="padding: 38px 32px; border-radius: 28px; border: 1px solid rgba(0,255,255,0.25); border-top: 1px solid rgba(255,255,255,0.35); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.85); width: 88%; max-width: 340px;">
+        <div class="login-card-chicha">
+            <div class="login-glow-orb"></div>
             <img src="./assets/img/mascota-hola.webp" id="avatar-guia" alt="Guía">
-            <p class="instruccion" style="margin-bottom: 22px; font-size: 1.2rem;">Acceso a la Expedición</p>
-            <input type="email" id="email" autocomplete="username" placeholder="tu@correo.com" class="input-chicha" style="text-align: center; width: 100%;">
-            <input type="password" id="pass" autocomplete="current-password" placeholder="••••••••" class="input-chicha" style="text-align: center; width: 100%; margin-bottom: 22px;">
-            <button id="btn-ingresar" class="btn-chicha" style="width: 100%;">Iniciar Expedición</button>
+            <h1 class="titulo-chicha" style="font-size: 1.8rem; margin: 0 0 6px 0;">PERÚ GO</h1>
+            <p class="subtitulo-login">Bitácora de Viajes & Proyectos</p>
+            <input type="email" id="email" autocomplete="username" placeholder="tu@correo.com" class="input-chicha" style="text-align: center;">
+            <input type="password" id="pass" autocomplete="current-password" placeholder="••••••••" class="input-chicha" style="text-align: center; margin-bottom: 20px;">
+            <button id="btn-ingresar" class="btn-chicha">Iniciar Expedición</button>
         </div>
     </div>
 
@@ -32,64 +34,147 @@
     <div id="pantalla-carga" class="pantalla-full">
         <img src="./assets/img/mascota-explora.webp" alt="Cargando" class="img-flotante">
         <div class="spinner-chicha"></div>
-        <p class="instruccion" style="margin-top: 15px;">Sincronizando Cartografía...</p>
+        <p class="instruccion" style="margin-top: 15px; font-size: 1rem;">Sincronizando Mapa...</p>
     </div>
 
-    <!-- OVERLAY OSCURO CON EFECTO RADIAL -->
+    <!-- OVERLAY OSCURO CON DESENFOQUE -->
     <div id="fondo-dashboard" class="radial-overlay" style="display: none;"></div>
     
-    <!-- VENTANA BUSCADOR (RENOVADA) -->
-    <div id="pantalla-buscador" class="modal-renovado" style="display: none;">
+    <!-- =========================================
+         1. VENTANA BUSCADOR (SPOTLIGHT)
+         ========================================= -->
+    <div id="pantalla-buscador" class="modal-floating-sheet" style="display: none;">
         <div class="swipe-indicador"></div>
         <button onclick="cerrarBuscador()" class="btn-cerrar-esquina-bento" aria-label="Cerrar">✕</button>
-        <div class="modal-header-icono">🔍</div>
-        <h2 class="titulo-chicha" style="font-size: 1.2rem; text-align: center; margin-bottom: 15px;">Buscador Geodésico</h2>
-        <div style="display: flex; justify-content: center;">
-            <input type="text" id="input-buscador" class="input-chicha input-mono" placeholder="Buscar lugar, obra, estadio..." style="width: 100%; max-width: 440px; text-align: center;">
+        
+        <div class="sheet-header">
+            <div class="sheet-badge-icon" style="border-color: #FF1493; color: #FF1493; box-shadow: 0 0 20px rgba(255,20,147,0.3);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div>
+                <h2 class="titulo-chicha" style="font-size: 1.25rem; margin: 0;">RADAR DE DESTINOS</h2>
+                <p class="sheet-subtitle">Busca por lugar, obra, estadio o provincia</p>
+            </div>
         </div>
-        <div id="resultados-buscador" style="margin-top: 15px; overflow-y: auto; max-height: 48vh; width: 100%; max-width: 440px; margin-left: auto; margin-right: auto;"></div>
+
+        <div class="search-box-wrapper">
+            <svg class="search-box-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00FFFF" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="input-buscador" class="input-search-spotlight" placeholder="Ej. Samne, Cachicadán, Estadio, Ceviche...">
+        </div>
+
+        <div class="quick-tags-bar" id="buscador-quick-tags">
+            <button type="button" class="q-tag" data-query="Topografía">📐 Topografía</button>
+            <button type="button" class="q-tag" data-query="Dron">🛸 Dron</button>
+            <button type="button" class="q-tag" data-query="Estadio">⚽ Estadios</button>
+            <button type="button" class="q-tag" data-query="Plaza">🏛️ Plazas</button>
+        </div>
+
+        <div id="resultados-buscador" class="resultados-grid"></div>
     </div>
     
-    <!-- VENTANA FILTROS (RENOVADA) -->
-    <div id="pantalla-filtros" class="modal-renovado" style="display: none;">
+    <!-- =========================================
+         2. VENTANA FILTROS (CAPAS DE MUNDO)
+         ========================================= -->
+    <div id="pantalla-filtros" class="modal-floating-sheet" style="display: none;">
         <div class="swipe-indicador"></div>
         <button id="btn-cerrar-filtros" class="btn-cerrar-esquina-bento" aria-label="Cerrar">✕</button>
-        <div class="modal-header-icono">🌍</div>
-        <h2 class="titulo-chicha" style="font-size: 1.15rem; text-align:center; margin-bottom: 15px;">Filtros & Ruta del Sabor</h2>
         
-        <span class="label-form-mini">Categoría Principal</span>
-        <div class="botonera-opciones" id="filtro-categoria" style="justify-content: center; margin-bottom: 18px;">
-            <div class="btn-opcion seleccionado" data-valor="TODOS">🌍 Todos</div>
-            <div class="btn-opcion" data-valor="TRABAJO">🚜 Trabajo</div>
-            <div class="btn-opcion" data-valor="PERSONAL">🍹 Personal</div>
-            <div class="btn-opcion" data-valor="FUTBOL">⚽ Fútbol</div>
-            <div class="btn-opcion" data-valor="SABOR" style="border-color:rgba(255,215,0,0.5); color:#FFD700;">🍜 Ruta Sabor</div>
+        <div class="sheet-header">
+            <div class="sheet-badge-icon" style="border-color: #00FFFF; color: #00FFFF; box-shadow: 0 0 20px rgba(0,255,255,0.3);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            </div>
+            <div>
+                <h2 class="titulo-chicha" style="font-size: 1.25rem; margin: 0;">FILTROS & SABOR</h2>
+                <p class="sheet-subtitle">Filtra tus conquistas en el mapa en tiempo real</p>
+            </div>
+        </div>
+        
+        <span class="label-form-mini">Selecciona una Categoría</span>
+        <div class="filtro-cards-grid" id="filtro-categoria">
+            <div class="btn-opcion filtro-card seleccionado" data-valor="TODOS">
+                <span class="f-emoji">🌍</span>
+                <span class="f-title">Todos</span>
+                <span class="f-desc">Mapa completo</span>
+            </div>
+            <div class="btn-opcion filtro-card" data-valor="TRABAJO">
+                <span class="f-emoji">🚜</span>
+                <span class="f-title">Trabajo</span>
+                <span class="f-desc">Obras & Campo</span>
+            </div>
+            <div class="btn-opcion filtro-card" data-valor="PERSONAL">
+                <span class="f-emoji">🍹</span>
+                <span class="f-title">Personal</span>
+                <span class="f-desc">Rutas & Viajes</span>
+            </div>
+            <div class="btn-opcion filtro-card" data-valor="FUTBOL">
+                <span class="f-emoji">⚽</span>
+                <span class="f-title">Fútbol</span>
+                <span class="f-desc">Canchas & Hinchada</span>
+            </div>
+            <div class="btn-opcion filtro-card filtro-card-wide" data-valor="SABOR">
+                <span class="f-emoji">🍜</span>
+                <div>
+                    <span class="f-title" style="color:#FFD700;">Ruta del Sabor (5★)</span>
+                    <span class="f-desc">Solo destinos con gastronomía 5 estrellas</span>
+                </div>
+            </div>
         </div>
 
-        <span class="label-form-mini">Rango Temporal</span>
-        <div style="display: flex; gap: 10px; margin-bottom: 25px; max-width: 440px; margin-left: auto; margin-right: auto;">
-            <input type="date" id="filtro-fecha-inicio" class="input-chicha input-mono" style="margin-bottom:0;">
-            <input type="date" id="filtro-fecha-fin" class="input-chicha input-mono" style="margin-bottom:0;">
+        <span class="label-form-mini">Intervalo de Fechas</span>
+        <div class="fechas-range-box">
+            <div class="fecha-field">
+                <span>DESDE</span>
+                <input type="date" id="filtro-fecha-inicio" class="input-chicha input-mono" style="margin:0;">
+            </div>
+            <div class="fecha-field">
+                <span>HASTA</span>
+                <input type="date" id="filtro-fecha-fin" class="input-chicha input-mono" style="margin:0;">
+            </div>
         </div>
-        <div style="display: flex; gap: 10px; max-width: 440px; margin-left: auto; margin-right: auto;">
+
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
             <button id="btn-limpiar-filtros" class="btn-glass-action btn-peligro-glass" style="flex:1;">Limpiar</button>
-            <button id="btn-aplicar-filtros" class="btn-chicha" style="flex:2;">Aplicar Filtros</button>
+            <button id="btn-aplicar-filtros" class="btn-chicha" style="flex:2;">Aplicar al Mapa</button>
         </div>
     </div>
 
-    <!-- VENTANA STATS / DASHBOARD (RENOVADA) -->
-    <div id="pantalla-dashboard" class="modal-renovado" style="display: none;">
+    <!-- =========================================
+         3. VENTANA STATS (CUADRADA Y PULIDA CON MASCOTA)
+         ========================================= -->
+    <div id="pantalla-dashboard" class="modal-floating-sheet" style="display: none;">
         <div class="swipe-indicador"></div>
         <button id="btn-cerrar-dashboard" class="btn-cerrar-esquina-bento" aria-label="Cerrar">✕</button>
-        <div class="modal-header-icono">📊</div>
-        <h2 class="titulo-chicha" style="font-size: 1.15rem; text-align:center; margin-bottom: 12px;">Centro de Comando Stats</h2>
         
-        <div style="display:flex; gap:10px; max-width:500px; margin: 0 auto 15px;">
-            <button id="btn-ruleta" class="btn-chicha" style="background: linear-gradient(135deg, #FF4500, #FFD700); color:#05080c; flex:1; font-size:0.76rem; padding:12px 6px;">🎲 Ruleta Destino</button>
-            <button id="btn-wrapped" class="btn-chicha" style="background: linear-gradient(135deg, #9400D3, #FF1493); color:white; flex:1; font-size:0.76rem; padding:12px 6px;">🎧 Resumen Anual</button>
+        <div class="sheet-header">
+            <div class="mascota-stats-wrapper">
+                <img src="./assets/img/mascota-explora.webp" alt="Perrito Viajero" class="perrito-animado">
+            </div>
+            <div>
+                <h2 class="titulo-chicha" style="font-size: 1.25rem; margin: 0;">ESTADÍSTICAS</h2>
+                <p class="sheet-subtitle">Tu bitácora de conquistas por el Perú</p>
+            </div>
         </div>
         
+        <!-- GRILLA BENTO PERFECTAMENTE SIMÉTRICA -->
         <div class="bento-grid" id="contenido-dashboard"></div>
+
+        <!-- BOTONES ESPECIALES: RULETA QUE VUELA AL MAPA + WRAPPED -->
+        <div class="gamificacion-row">
+            <button id="btn-ruleta" class="btn-game-card game-ruleta">
+                <span class="game-icon">🎲</span>
+                <div>
+                    <div class="game-title">Ruleta Nómada</div>
+                    <div class="game-sub">Volar a destino al azar</div>
+                </div>
+            </button>
+            <button id="btn-wrapped" class="btn-game-card game-wrapped">
+                <span class="game-icon">🎧</span>
+                <div>
+                    <div class="game-title">Wrapped Anual</div>
+                    <div class="game-sub">Tu tarjeta resumen</div>
+                </div>
+            </button>
+        </div>
         
         <div class="botones-sistema-compactos">
             <button id="btn-backup" class="btn-sistema">💾 Respaldar</button>
@@ -100,12 +185,20 @@
         </div>
     </div>
 
-    <!-- MODAL DETALLE DE PROVINCIA -->
-    <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0, 0, 0, 0.45); z-index: 9998; justify-content: center; align-items: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
+    <!-- =========================================
+         MODAL DETALLE DE PROVINCIA (CON PERRITO VIAJERO)
+         ========================================= -->
+    <div id="pantalla-info" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0, 0, 0, 0.55); z-index: 9998; justify-content: center; align-items: center; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);">
         <div class="info-contenido" id="panel-tarjeta-viajes">
             <div class="swipe-indicador"></div>
+            
+            <!-- PERRITO VIAJERO ANIMADO EN LA ESQUINA SUPERIOR IZQUIERDA DEL PANEL -->
+            <div class="perrito-guardian-box" title="¡Listo para explorar!">
+                <img src="./assets/img/mascota-explora.webp" alt="Guía Viajero" class="perrito-animado">
+            </div>
+
             <button id="btn-cerrar-info" class="btn-cerrar-esquina-bento" style="background: rgba(255,20,147,0.18); border: 1px solid rgba(255,20,147,0.5); color:white;">✕</button>
-            <h2 id="info-provincia-titulo" class="titulo-chicha" style="margin-bottom: 4px;">PROVINCIA</h2>
+            <h2 id="info-provincia-titulo" class="titulo-chicha" style="margin-bottom: 4px; margin-top: 6px;">PROVINCIA</h2>
             <div id="rango-provincia" class="badge-rango-alcalde">🎒 Forastero</div>
             
             <div id="tabs-visitas" class="tabs-visitas-bar">
@@ -153,7 +246,7 @@
                 </div>
                 
                 <div class="consola-geodesica">
-                    <span class="label-form-mini" style="margin-top:0; color:#00FFFF;">Consola Geodésica & Cota Z</span>
+                    <span class="label-form-mini" style="margin-top:0; color:#00FFFF;">Ubicación & Altitud Z</span>
                     <div class="geo-inputs-row">
                         <input type="text" id="nueva-coordenada" class="input-chicha input-mono" placeholder="📍 Lat, Lng">
                         <input type="number" id="nueva-altitud" class="input-chicha input-mono input-z" placeholder="⛰️ Z (m)">
@@ -239,11 +332,21 @@
         </div>
     </div>
 
-    <!-- MODAL WRAPPED -->
-    <div id="modal-wrapped" class="pantalla-full glass-modal" style="display: none; opacity:0; z-index: 10050; padding:20px;">
-        <button onclick="document.getElementById('modal-wrapped').style.display='none'" class="btn-cerrar-esquina">✕</button>
-        <h1 style="color:#00FA9A; font-family:'Paytone One'; font-size:2rem; text-align:center; margin-top:20px;">TU AÑO VIAJERO</h1>
-        <div id="wrapped-content" style="text-align:center; color:white; font-size:1.1rem; line-height:1.6; margin-top:20px;"></div>
+    <!-- =========================================
+         NUEVO MODAL WRAPPED VIAJERO (TARJETA VIP)
+         ========================================= -->
+    <div id="modal-wrapped" class="pantalla-full" style="display: none; opacity:0; z-index: 10050; padding:20px;">
+        <div class="wrapped-vip-card">
+            <div class="wrapped-glow-top"></div>
+            <button onclick="cerrarWrapped()" class="btn-cerrar-esquina-bento">✕</button>
+            <span class="wrapped-tag-year" id="wrapped-year-badge">RESUMEN 2026</span>
+            <img src="./assets/img/mascota-feliz.webp" alt="Mascota Feliz" class="wrapped-mascota-img">
+            <h2 class="titulo-chicha" style="font-size: 1.55rem; margin: 4px 0 14px;">WRAPPED VIAJERO</h2>
+            
+            <div id="wrapped-content" style="width: 100%;"></div>
+
+            <button onclick="cerrarWrapped()" class="btn-chicha" style="margin-top: 18px; background: linear-gradient(135deg, #00FA9A, #00FFFF);">¡A Seguir Conquistando!</button>
+        </div>
     </div>
 
     <!-- PLANTILLA INSTAGRAM STORY -->
@@ -257,10 +360,10 @@
 
     <button id="btn-confirmar-ubicacion" class="btn-flotante-gigante" style="display: none;">✅ CONFIRMAR COORDENADA</button>
 
-    <!-- CONTROLES SUPERIORES FLOTANTES (VOLVER Y AUDIO) -->
+    <!-- CONTROLES SUPERIORES FLOTANTES -->
     <button id="btn-volver" class="top-floating-pill pill-left" style="display: none;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        <span>Mapa</span>
+        <span>Perú</span>
     </button>
 
     <button id="btn-mute" class="top-floating-pill pill-right" style="display: none;" aria-label="Control de audio">
@@ -271,53 +374,76 @@
     <h1 id="titulo-mapa" class="titulo-chicha">PERÚ <span class="go-text">GO</span></h1>
     <h2 id="titulo-departamento" class="titulo-chicha"></h2>
     
-    <!-- =========================================
-         DOCK INFERIOR CON EFECTO ACORDEÓN / RADIAL
-         ========================================= -->
-    <div id="contenedor-bottom-bar" class="dock-radial-container" style="display: none;">
-        <!-- Botones satelitales que se despliegan en abanico circular -->
-        <div id="dock-menu-radial" class="dock-satellites">
-            <button id="btn-capas" class="sat-item" title="Capas Satélite">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                <span>Capas</span>
+    <!-- ORBE RADIAL CON ARCO DE SATÉLITES Y ANILLO PROGRESO -->
+    <div id="contenedor-bottom-bar" class="radial-hub-wrapper" style="display: none;">
+        <div class="radial-backdrop-disc" id="radial-disc"></div>
+
+        <div id="dock-menu-radial" class="radial-satellites-arc">
+            <button id="btn-capas" class="arc-sat-btn" style="--angle: -63deg; --sat-color: #00FFFF;" title="Vista Satélite">
+                <div class="arc-sat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                </div>
+                <span class="arc-sat-label">Capas</span>
             </button>
-            <button id="btn-filtro" class="sat-item" title="Filtros">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                <span id="label-dock-filtro">Filtros</span>
+
+            <button id="btn-filtro" class="arc-sat-btn" style="--angle: -21deg; --sat-color: #FFD700;" title="Filtros">
+                <div class="arc-sat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                </div>
+                <span class="arc-sat-label" id="label-dock-filtro">Filtros</span>
             </button>
-            <button id="btn-buscar" class="sat-item" title="Buscador">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <span>Buscar</span>
+
+            <button id="btn-buscar" class="arc-sat-btn" style="--angle: 21deg; --sat-color: #FF1493;" title="Buscador">
+                <div class="arc-sat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <span class="arc-sat-label">Buscar</span>
             </button>
-            <button id="btn-dashboard" class="sat-item" title="Estadísticas">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-                <span>Stats</span>
+
+            <button id="btn-dashboard" class="arc-sat-btn" style="--angle: 63deg; --sat-color: #00FA9A;" title="Estadísticas">
+                <div class="arc-sat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                </div>
+                <span class="arc-sat-label">Stats</span>
             </button>
         </div>
-        <!-- Botón principal central con icono de brújula/expansión -->
-        <button id="btn-toggle-radial" class="dock-trigger-btn" aria-label="Abrir Menú">
-            <div class="trigger-ring"></div>
-            <svg id="svg-trigger-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+
+        <button id="btn-toggle-radial" class="orb-core-btn" aria-label="Menú de Exploración">
+            <svg class="orb-progress-svg" viewBox="0 0 80 80">
+                <defs>
+                    <linearGradient id="chichaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#FF1493" />
+                        <stop offset="50%" stop-color="#00FFFF" />
+                        <stop offset="100%" stop-color="#00FA9A" />
+                    </linearGradient>
+                </defs>
+                <circle class="orb-ring-bg" cx="40" cy="40" r="35"></circle>
+                <circle class="orb-ring-fill" id="anillo-progreso-svg" cx="40" cy="40" r="35"></circle>
+            </svg>
+
+            <div class="orb-inner-circle">
+                <svg id="svg-trigger-icon" class="orb-compass-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+                </svg>
+            </div>
+
+            <span id="texto-progreso" class="orb-pct-badge">0%</span>
         </button>
     </div>
 
     <div id="map"></div>
     
+    <!-- VISOR DE FOTOS -->
     <div id="visor-fotos" class="pantalla-full glass-modal" style="display: none; opacity:0; z-index: 10010;">
         <div class="swipe-indicador" style="position: absolute; top: 20px;"></div>
         <button onclick="cerrarVisorFotos()" class="btn-cerrar-esquina" style="font-size:2.2rem;">✕</button>
         <img id="img-visor" src="" style="max-width:95%; max-height:85vh; border-radius:14px; border:1px solid rgba(0,255,255,0.4); box-shadow:0 15px 40px rgba(0,0,0,0.9); object-fit:contain;">
     </div>
 
-    <div id="contenedor-progreso">
-        <div id="barra-fondo"><div id="barra-relleno"></div></div>
-        <img src="./assets/img/mascota-explora.webp" id="mascota-progreso" alt="Explorador">
-        <span id="texto-progreso">0%</span>
-    </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="firebase.js"></script>
-    <script type="module" src="app.js?v=25"></script>
+    <script type="module" src="app.js?v=32"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

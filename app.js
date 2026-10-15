@@ -1,8 +1,10 @@
 "use strict";
 
+// 1. IMPORTACIONES FIREBASE
 import { db, auth, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "./firebase.js";
 const IMGBB_API_KEY = "055cde6238b2cefe13e31dc43f2b2570"; 
 
+// 2. REFERENCIAS AL DOM
 const tituloDepartamento = document.getElementById('titulo-departamento');
 const btnVolver = document.getElementById('btn-volver');
 const pantallaInfo = document.getElementById('pantalla-info');
@@ -23,10 +25,13 @@ const btnCerrarSesion = document.getElementById('btn-cerrar-sesion');
 const pantallaAcceso = document.getElementById('pantalla-acceso');
 const contenedorMapa = document.getElementById('map');
 
+// Hub Radial y Anillo de Progreso SVG
 const barraNavegacion = document.getElementById('contenedor-bottom-bar');
 const btnToggleRadial = document.getElementById('btn-toggle-radial');
 const dockMenuRadial = document.getElementById('dock-menu-radial');
-const svgTriggerIcon = document.getElementById('svg-trigger-icon');
+const radialDisc = document.getElementById('radial-disc');
+const anilloProgresoSvg = document.getElementById('anillo-progreso-svg');
+const textoProgreso = document.getElementById('texto-progreso');
 
 const btnMute = document.getElementById('btn-mute');
 const svgAudioOn = document.getElementById('svg-audio-on');
@@ -46,13 +51,11 @@ const inputFiltroFin = document.getElementById('filtro-fecha-fin');
 
 const avatarGuia = document.getElementById('avatar-guia');
 const tituloMapa = document.getElementById('titulo-mapa');
-const contenedorProgreso = document.getElementById('contenedor-progreso');
-const barraRelleno = document.getElementById('barra-relleno');
-const mascotaProgreso = document.getElementById('mascota-progreso');
-const textoProgreso = document.getElementById('texto-progreso');
 const pantallaBuscador = document.getElementById('pantalla-buscador');
 const inputBuscador = document.getElementById('input-buscador');
 const resultadosBuscador = document.getElementById('resultados-buscador');
+const buscadorQuickTags = document.getElementById('buscador-quick-tags');
+
 const btnBackup = document.getElementById('btn-backup');
 const btnImportar = document.getElementById('btn-importar');
 const inputImportar = document.getElementById('input-importar');
@@ -67,6 +70,7 @@ const camposFutbol = document.getElementById('campos-futbol');
 const btnWrapped = document.getElementById('btn-wrapped');
 const btnRuleta = document.getElementById('btn-ruleta');
 
+// 3. ESTADO GLOBAL
 let diccCentrosProvincias = {};
 let idEdicionActual = null;
 let seleccionClima = '';
@@ -94,6 +98,7 @@ let mapaYaInicializado = false;
 let tabVisitaActiva = 'TODAS';
 let menuRadialAbierto = false;
 
+const CIRCUNFERENCIA_ANILLO = 220; // 2 * PI * 35
 const coloresChichaPremium = [ "#FF1493", "#00FA9A", "#FFD700", "#00FFFF", "#FF4500", "#9400D3" ];
 const audios = [ './assets/audio/musica-uno.mp3', './assets/audio/musica-dos.mp3', './assets/audio/musica-tres.mp3' ];
 const audioAmbiental = new Audio();
@@ -103,10 +108,11 @@ const desafiosNomadas = [
     "Prueba el plato o bebida más rara que encuentres en el mercado local.",
     "Busca el punto más alto del lugar y toma una foto panorámica.",
     "Pregúntale a un local sobre un mito o leyenda de esta zona.",
-    "Tómate un selfie curioso con letrero de bienvenida o Plaza de Armas.",
+    "Tómate un selfie curioso con el letrero de bienvenida o la Plaza de Armas.",
     "Encuentra una calle sin asfaltar y anota algo que te llame la atención."
 ];
 
+// 4. UTILIDADES, HÁPTICA Y EXIF
 function feedbackHaptico(ms = 12) {
     if (navigator.vibrate) {
         try { navigator.vibrate(ms); } catch (e) {}
@@ -147,23 +153,29 @@ function habilitarSwipeToClose(elSel, cb) {
     if (!el) return;
     let startY = 0;
     let currentY = 0;
+    const esFloating = el.classList.contains('modal-floating-sheet');
+
     el.addEventListener('touchstart', (e) => {
         if (el.scrollTop <= 0) startY = e.touches[0].clientY;
     }, { passive: true });
+
     el.addEventListener('touchmove', (e) => {
         if (!startY) return;
         currentY = e.touches[0].clientY;
         const diffY = currentY - startY;
         if (diffY > 0) {
             el.style.transition = 'none';
-            el.style.transform = `translateY(${diffY}px)`;
+            el.style.transform = esFloating
+                ? `translate(-50%, ${diffY}px)`
+                : `translateY(${diffY}px)`;
         }
     }, { passive: true });
+
     el.addEventListener('touchend', () => {
         if (!startY || !currentY) return;
         const diffY = currentY - startY;
-        el.style.transition = 'transform 0.3s';
-        if (diffY > 120) cb();
+        el.style.transition = 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)';
+        if (diffY > 110) cb();
         else el.style.transform = '';
         startY = 0;
         currentY = 0;
@@ -174,20 +186,41 @@ function mostrarSkeletonLoading() {
     contenedorLugares.innerHTML = `<div class="esqueleto" style="height: 85px; margin: 10px 0;"></div>`;
 }
 
+// =========================================
+// CONTROL DEL ORBE RADIAL Y ANILLO SVG
+// =========================================
+function actualizarAnilloOrbe(porcentaje, dominado = false) {
+    const pct = Math.max(0, Math.min(100, porcentaje));
+    if (anilloProgresoSvg) {
+        const offset = CIRCUNFERENCIA_ANILLO - (pct / 100) * CIRCUNFERENCIA_ANILLO;
+        anilloProgresoSvg.style.strokeDashoffset = offset;
+        anilloProgresoSvg.style.stroke = dominado ? '#FFD700' : 'url(#chichaGrad)';
+    }
+    if (textoProgreso) {
+        textoProgreso.innerText = dominado ? '👑 100%' : `${pct}%`;
+        textoProgreso.style.color = dominado ? '#00FA9A' : '#FFD700';
+        textoProgreso.style.borderColor = dominado ? '#00FA9A' : 'rgba(255, 215, 0, 0.55)';
+    }
+}
+
 function cerrarMenuRadial() {
     if (!menuRadialAbierto) return;
     menuRadialAbierto = false;
     if (dockMenuRadial) dockMenuRadial.classList.remove('activo');
+    if (radialDisc) radialDisc.classList.remove('activo');
     if (btnToggleRadial) btnToggleRadial.classList.remove('abierto');
-    if (fondoDashboard) fondoDashboard.style.display = 'none';
+    if (fondoDashboard && !pantallaDashboard.classList.contains('activo') && !pantallaFiltros.classList.contains('activo') && !pantallaBuscador.classList.contains('activo')) {
+        fondoDashboard.style.display = 'none';
+    }
 }
 
 if (btnToggleRadial) {
     btnToggleRadial.onclick = (e) => {
         e.stopPropagation();
-        feedbackHaptico(15);
+        feedbackHaptico(16);
         menuRadialAbierto = !menuRadialAbierto;
-        dockMenuRadial.classList.toggle('activo', menuRadialAbierto);
+        if (dockMenuRadial) dockMenuRadial.classList.toggle('activo', menuRadialAbierto);
+        if (radialDisc) radialDisc.classList.toggle('activo', menuRadialAbierto);
         btnToggleRadial.classList.toggle('abierto', menuRadialAbierto);
         if (menuRadialAbierto) {
             fondoDashboard.style.display = 'block';
@@ -199,16 +232,17 @@ if (btnToggleRadial) {
 }
 
 if (fondoDashboard) {
-    const fondoOriginalClick = fondoDashboard.onclick;
     fondoDashboard.onclick = () => {
         cerrarMenuRadial();
         window.cerrarDashboard();
         window.cerrarFiltros();
         window.cerrarBuscador();
-        if (fondoOriginalClick) fondoOriginalClick();
     };
 }
 
+// =========================================
+// CONTROLES SEGMENTADOS Y METADATOS EXIF
+// =========================================
 function vincularGrupoBotones(contenedorId, inputHiddenId, claseActiva, callbackCambio = null) {
     const cont = document.getElementById(contenedorId);
     const input = document.getElementById(inputHiddenId);
@@ -385,6 +419,13 @@ function comprobarEfemerides() {
     if (hallado) setTimeout(() => mostrarToast(`Cápsula del Tiempo: Hace ${anios} año(s) estabas en ${hallado.nombre} 🕰️`, 'success'), 2000);
 }
 
+// =========================================
+// 5. INICIALIZACIÓN MAPA Y GIS
+// =========================================
+function insertarTarjetaLugarSegura(htmlString) {
+    contenedorLugares.insertAdjacentHTML('beforeend', htmlString);
+}
+
 document.querySelectorAll('.btn-opcion:not(#filtro-categoria .btn-opcion)').forEach(btn => {
     btn.onclick = function() {
         feedbackHaptico(10);
@@ -474,7 +515,7 @@ function obtenerEstiloProvincia(fP) {
     else return { color: "#444", weight: 2, fillColor: "#111", fillOpacity: opN, className: 'poligono-raspadita' };
 }
 
-function renderizarCapaDepartamento(nD) {
+function renderizarCapaDepartamento(nD, ajustarVista = true) {
     if (capaNacional) mapa.removeLayer(capaNacional);
     if (capaProvincias) mapa.removeLayer(capaProvincias);
 
@@ -501,7 +542,9 @@ function renderizarCapaDepartamento(nD) {
         }
     }).addTo(mapa);
 
-    mapa.fitBounds(capaProvincias.getBounds());
+    if (ajustarVista) {
+        mapa.fitBounds(capaProvincias.getBounds());
+    }
     tituloMapa.style.display = 'none';
     tituloDepartamento.innerText = nD;
     tituloDepartamento.style.display = 'block';
@@ -593,7 +636,7 @@ function dibujarMapaNacional() {
                 feedbackHaptico(12);
                 const nD = f.properties.NOMBDEP;
                 l.setStyle({ color: "#FFFFFF", weight: 4, fillOpacity: 0.5 });
-                setTimeout(() => renderizarCapaDepartamento(nD), 320);
+                setTimeout(() => renderizarCapaDepartamento(nD, true), 320);
             });
         }
     }).addTo(mapa);
@@ -618,6 +661,9 @@ if (btnCapas) {
     }; 
 }
 
+// =========================================
+// 6. FILTROS, STATS SIMÉTRICO, RULETA Y WRAPPED VIP
+// =========================================
 document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(btn => {
     btn.onclick = () => {
         feedbackHaptico(10);
@@ -627,6 +673,7 @@ document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(btn => {
 });
 
 window.cerrarFiltros = () => {
+    pantallaFiltros.style.transform = '';
     pantallaFiltros.classList.remove('activo');
     setTimeout(() => {
         pantallaFiltros.style.display = 'none';
@@ -675,7 +722,7 @@ if (btnAplicarFiltros) {
         const hayFiltroActivo = (filtroActualMundo !== 'TODOS' || filtroFechaInicio || filtroFechaFin);
         if (labelDockFiltro) labelDockFiltro.innerText = nombresFiltro[filtroActualMundo] || 'Filtros';
         btnFiltro.classList.toggle('activo', Boolean(hayFiltroActivo));
-        mostrarToast("Filtros aplicados");
+        mostrarToast("Filtros aplicados al mapa");
         refrescarMundoLocal();
         window.cerrarFiltros();
     };
@@ -739,6 +786,7 @@ if (btnDashboard) {
         let tot = 0;
         let pVis = new Set();
         let est = [];
+
         Object.keys(datosViajes).forEach(prov => {
             datosViajes[prov].forEach(v => {
                 if (pasaFiltros(v) && v.estado !== 'WISHLIST') {
@@ -750,16 +798,65 @@ if (btnDashboard) {
                 }
             });
         });
+
         const totP = datosProvinciasGenerales ? datosProvinciasGenerales.features.length : 196;
         const porc = Math.round((pVis.size / totP) * 100) || 0;
         const racha = calcRacha();
+
+        // Grilla Bento cuadrada, limpia y simétrica
         contenidoDashboard.innerHTML = `
-            <div class="bento-item bento-full" style="border-color:rgba(0,255,255,0.4);"><div class="bento-titulo" style="color:#00FFFF;">Avance Territorial</div><div class="bento-valor" style="color:#00FFFF;">${porc}%</div><div style="font-size:0.75rem; color:#ddd;">Conquistado: ${pVis.size} / ${totP} provincias</div></div>
-            <div class="bento-item" style="border-left:4px solid #FFD700;"><div class="bento-titulo">Racha Activa</div><div class="bento-valor" style="color:#FFD700;">${racha} ${racha > 0 ? '🔥' : '🧊'}</div></div>
-            <div class="bento-item" style="border-left:4px solid #FF4500;"><div class="bento-titulo">Proyectos</div><div class="bento-valor" style="color:#FF4500;">${tP} 🚜</div></div>
-            <div class="bento-item" style="border-left:4px solid #00FA9A;"><div class="bento-titulo">Personales</div><div class="bento-valor" style="color:#00FA9A;">${tPer} 🍹</div></div>
-            <div class="bento-item" style="border-left:4px solid #FF1493;"><div class="bento-titulo">Registros</div><div class="bento-valor" style="color:#FF1493;">${tot} 📍</div></div>
-            <div class="bento-item bento-full" style="border-color:rgba(255,255,255,0.2);"><div class="bento-titulo">Estadios & Canchas</div><div class="bento-valor" style="color:#FFF;">${est.length} ⚽</div><div style="font-size:0.75rem; color:#ddd;">${est.join(', ') || 'Aún no hay canchas registradas.'}</div></div>
+            <div class="bento-item bento-full" style="border-color:rgba(0,255,255,0.38);">
+                <div class="bento-top-row">
+                    <span class="bento-titulo" style="color:#00FFFF;">Avance Territorial</span>
+                    <span class="bento-valor" style="color:#00FFFF; font-size:1.35rem;">${porc}%</span>
+                </div>
+                <div class="bento-bar-mini"><div class="bento-bar-fill" style="width:${porc}%;"></div></div>
+                <div class="bento-sub">Has conquistado <b>${pVis.size}</b> de <b>${totP}</b> provincias del Perú</div>
+            </div>
+
+            <div class="bento-item" style="border-left:4px solid #FFD700;">
+                <div class="bento-top-row">
+                    <span class="bento-titulo">Racha Activa</span>
+                    <span>${racha > 0 ? '🔥' : '🧊'}</span>
+                </div>
+                <div class="bento-valor" style="color:#FFD700;">${racha}</div>
+                <div class="bento-sub">Meses seguidos</div>
+            </div>
+
+            <div class="bento-item" style="border-left:4px solid #FF4500;">
+                <div class="bento-top-row">
+                    <span class="bento-titulo">Proyectos</span>
+                    <span>🚜</span>
+                </div>
+                <div class="bento-valor" style="color:#FF4500;">${tP}</div>
+                <div class="bento-sub">Obras & Campo</div>
+            </div>
+
+            <div class="bento-item" style="border-left:4px solid #00FA9A;">
+                <div class="bento-top-row">
+                    <span class="bento-titulo">Personales</span>
+                    <span>🍹</span>
+                </div>
+                <div class="bento-valor" style="color:#00FA9A;">${tPer}</div>
+                <div class="bento-sub">Viajes & Rutas</div>
+            </div>
+
+            <div class="bento-item" style="border-left:4px solid #FF1493;">
+                <div class="bento-top-row">
+                    <span class="bento-titulo">Registros</span>
+                    <span>📍</span>
+                </div>
+                <div class="bento-valor" style="color:#FF1493;">${tot}</div>
+                <div class="bento-sub">Bitácoras totales</div>
+            </div>
+
+            <div class="bento-item bento-full" style="border-color:rgba(255,255,255,0.16);">
+                <div class="bento-top-row">
+                    <span class="bento-titulo">Estadios & Canchas Visitadas</span>
+                    <span class="bento-valor" style="color:#FFF; font-size:1.1rem;">${est.length} ⚽</span>
+                </div>
+                <div class="bento-sub" style="color:#e2e8f0; margin-top:4px;">${est.join(' • ') || 'Aún no hay canchas registradas.'}</div>
+            </div>
         `;
         fondoDashboard.style.display = 'block';
         fondoDashboard.style.zIndex = '9999';
@@ -768,33 +865,78 @@ if (btnDashboard) {
     };
 }
 
+// =========================================
+// RULETA NÓMADA QUE VUELA AL LUGAR EN EL MAPA
+// =========================================
 if (btnRuleta) {
     btnRuleta.onclick = () => {
-        feedbackHaptico(20);
+        feedbackHaptico(25);
         if (!datosProvinciasGenerales) return;
+
         let candidatas = [];
         datosProvinciasGenerales.features.forEach(p => {
-            let nP = p.properties.NOMBPROV.trim().toUpperCase();
+            const nP = p.properties.NOMBPROV.trim().toUpperCase();
+            const nD = p.properties.FIRST_NOMB.trim();
             let hasVisita = false;
-            if (datosViajes[nP]) hasVisita = datosViajes[nP].some(v => (v.estado || 'VISITADO') === 'VISITADO');
-            if (!hasVisita) candidatas.push(nP);
+            if (datosViajes[nP]) {
+                hasVisita = datosViajes[nP].some(v => (v.estado || 'VISITADO') === 'VISITADO');
+            }
+            if (!hasVisita) {
+                candidatas.push({ prov: p.properties.NOMBPROV.trim(), dep: nD });
+            }
         });
         
         if (candidatas.length > 0) {
             const elegida = candidatas[Math.floor(Math.random() * candidatas.length)];
-            mostrarToast(`🎲 Destino al azar: ¡Tu misión es conquistar ${elegida}!`, 'success');
+            window.cerrarDashboard();
+            mostrarToast(`🎲 ¡Rumbo a ${elegida.prov} (${elegida.dep})!`, 'success');
+
+            // Renderizar el departamento sin salto brusco y volar suavemente a la provincia sorteada
+            renderizarCapaDepartamento(elegida.dep, false);
+
+            let capaObjetivo = null;
+            if (capaProvincias) {
+                capaProvincias.eachLayer(l => {
+                    if (l.feature && l.feature.properties.NOMBPROV.trim().toUpperCase() === elegida.prov.toUpperCase()) {
+                        capaObjetivo = l;
+                    }
+                });
+            }
+
+            if (capaObjetivo) {
+                mapa.flyToBounds(capaObjetivo.getBounds(), { padding: [45, 45], maxZoom: 9.5, duration: 1.4 });
+                // Destello dorado para resaltar dónde queda en el mapa
+                capaObjetivo.setStyle({ color: "#FFD700", weight: 5, fillColor: "#00FFFF", fillOpacity: 0.55 });
+                setTimeout(() => {
+                    const col = coloresChichaPremium[elegida.prov.length % coloresChichaPremium.length];
+                    abrirInformacionProvincia(elegida.prov, col);
+                }, 1500);
+            } else {
+                window.volarAProvincia(elegida.prov, elegida.dep);
+            }
         } else {
-            mostrarToast("¡Impresionante! Ya visitaste todas las provincias de Perú.", 'success');
+            mostrarToast("¡Impresionante! Ya visitaste todas las provincias del Perú 👑", 'success');
         }
     };
 }
 
+// =========================================
+// NUEVO WRAPPED VIAJERO (TARJETA VIP)
+// =========================================
+window.cerrarWrapped = () => {
+    const modalW = document.getElementById('modal-wrapped');
+    if (!modalW) return;
+    modalW.style.opacity = '0';
+    setTimeout(() => { modalW.style.display = 'none'; }, 300);
+};
+
 if (btnWrapped) {
     btnWrapped.onclick = () => {
         feedbackHaptico(20);
-        let y = new Date().getFullYear();
+        const y = new Date().getFullYear();
         let tr = 0; let pe = 0; let fu = 0;
         let provs = new Set();
+
         Object.keys(datosViajes).forEach(p => datosViajes[p].forEach(v => {
             if (v.fecha && v.fecha.startsWith(y) && v.estado !== 'WISHLIST') {
                 provs.add(p);
@@ -803,17 +945,64 @@ if (btnWrapped) {
                 else pe++;
             }
         }));
-        let topT = [tr, pe, fu];
-        let maxIdx = topT.indexOf(Math.max(...topT));
-        let aura = maxIdx === 0 ? '🚜 Topógrafo Guerrero' : maxIdx === 1 ? '🍹 Aventurero Libre' : '⚽ Hincha Fiel';
-        document.getElementById('wrapped-content').innerHTML = `Este ${y} fue increíble:<br><br><span style="color:#00FFFF; font-size:1.6rem; font-weight:bold;">${provs.size}</span> Provincias descubiertas<br><br><span style="color:#FFD700; font-size:1.6rem; font-weight:bold;">${tr + pe + fu}</span> Expediciones totales<br><br>Tu aura de viaje:<br><span style="color:#FF1493; font-size:1.5rem; font-family:'Paytone One';">${aura}</span>`;
-        document.getElementById('modal-wrapped').style.display = 'flex';
-        setTimeout(() => document.getElementById('modal-wrapped').style.opacity = '1', 10);
+
+        const totAnio = tr + pe + fu;
+        const topT = [tr, pe, fu];
+        const maxIdx = topT.indexOf(Math.max(...topT));
+        const aura = totAnio === 0
+            ? '🧭 Explorador en Preparación'
+            : maxIdx === 0
+                ? '🚜 Topógrafo Guerrero'
+                : maxIdx === 1
+                    ? '🍹 Aventurero Libre'
+                    : '⚽ Hincha Fiel';
+
+        const badgeYear = document.getElementById('wrapped-year-badge');
+        if (badgeYear) badgeYear.innerText = `TEMPORADA ${y}`;
+
+        document.getElementById('wrapped-content').innerHTML = `
+            <div class="wrapped-aura-box">
+                <div class="wrapped-aura-label">Tu Aura Viajera del Año</div>
+                <div class="wrapped-aura-val">${aura}</div>
+            </div>
+
+            <div class="wrapped-stats-mini-grid" style="margin-bottom: 10px;">
+                <div class="w-stat-pill" style="grid-column: span 3; display:flex; justify-content:space-around; align-items:center; background:rgba(0,255,255,0.07); border-color:rgba(0,255,255,0.28);">
+                    <div>
+                        <span class="w-stat-num" style="color:#00FFFF; font-size:1.55rem;">${provs.size}</span>
+                        <span class="w-stat-txt">Provincias</span>
+                    </div>
+                    <div style="width:1px; height:32px; background:rgba(255,255,255,0.12);"></div>
+                    <div>
+                        <span class="w-stat-num" style="color:#FFD700; font-size:1.55rem;">${totAnio}</span>
+                        <span class="w-stat-txt">Expediciones</span>
+                    </div>
+                </div>
+
+                <div class="w-stat-pill">
+                    <span class="w-stat-num" style="color:#FF4500;">${tr} 🚜</span>
+                    <span class="w-stat-txt">Trabajo</span>
+                </div>
+                <div class="w-stat-pill">
+                    <span class="w-stat-num" style="color:#00FA9A;">${pe} 🍹</span>
+                    <span class="w-stat-txt">Personal</span>
+                </div>
+                <div class="w-stat-pill">
+                    <span class="w-stat-num" style="color:#FF1493;">${fu} ⚽</span>
+                    <span class="w-stat-txt">Fútbol</span>
+                </div>
+            </div>
+        `;
+
+        const modalW = document.getElementById('modal-wrapped');
+        modalW.style.display = 'flex';
+        setTimeout(() => { modalW.style.opacity = '1'; }, 10);
         if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 100, zIndex: 10060 });
     };
 }
 
 window.cerrarDashboard = () => {
+    pantallaDashboard.style.transform = '';
     pantallaDashboard.classList.remove('activo');
     setTimeout(() => {
         pantallaDashboard.style.display = 'none';
@@ -825,6 +1014,9 @@ habilitarSwipeToClose('#pantalla-dashboard', window.cerrarDashboard);
 habilitarSwipeToClose('.info-contenido', () => { if (btnCerrarInfo) btnCerrarInfo.click(); });
 habilitarSwipeToClose('#visor-fotos', () => { if (window.cerrarVisorFotos) window.cerrarVisorFotos(); });
 
+// =========================================
+// 7. GENERADOR POSTAL INSTAGRAM
+// =========================================
 window.generarPostalIG = async (id, prov) => {
     feedbackHaptico(15);
     mostrarToast("Generando Postal...", "success");
@@ -861,6 +1053,9 @@ window.generarPostalIG = async (id, prov) => {
     }
 };
 
+// =========================================
+// 8. CRUD Y GEOLOCALIZACIÓN Z
+// =========================================
 document.getElementById('btn-gps').onclick = (e) => {
     e.preventDefault();
     feedbackHaptico(15);
@@ -977,7 +1172,7 @@ function abrirInformacionProvincia(nomOri, col) {
 
     pantallaInfo.style.display = 'flex';
     tarjetaContenidoInfo.style.transform = '';
-    setTimeout(() => renderizarLugares(nomL, col), 280);
+    setTimeout(() => renderizarLugares(nomL, col), 260);
 }
 
 function renderizarLugares(nomL, col) {
@@ -1027,11 +1222,11 @@ function renderizarLugares(nomL, col) {
 
         let det = '';
         if (v.tipo === 'TRABAJO') {
-            det = `<p style="margin:6px 0;">${v.tipoProyecto ? `<b>Especialidad:</b> ${escaparHTML(v.tipoProyecto)}<br>` : ''}<b>Contratista:</b> <span style="color:#FFD700;">${s(v.empresa)}</span> ${escaparHTML(v.clima || '')}</p>`;
+            det = `<p style="margin:6px 0;">${v.tipoProyecto ? `<b style="color:#00FFFF;">Especialidad:</b> ${escaparHTML(v.tipoProyecto)}<br>` : ''}<b style="color:#00FFFF;">Contratista:</b> <span style="color:#FFD700;">${s(v.empresa)}</span> ${escaparHTML(v.clima || '')}</p>`;
         } else if (v.tipo === 'FUTBOL') {
-            det = `<p style="margin:6px 0;">${v.estadio ? `<b>Estadio:</b> ${escaparHTML(v.estadio)}<br>` : ''}${v.partido ? `<b>Partido:</b> ${escaparHTML(v.partido)}<br>` : ''}<b>Ambiente:</b> <span style="color:#FFD700;">${s(v.ambiente)}</span></p>`;
+            det = `<p style="margin:6px 0;">${v.estadio ? `<b style="color:#00FFFF;">Estadio:</b> ${escaparHTML(v.estadio)}<br>` : ''}${v.partido ? `<b style="color:#00FFFF;">Partido:</b> ${escaparHTML(v.partido)}<br>` : ''}<b style="color:#00FFFF;">Ambiente:</b> <span style="color:#FFD700;">${s(v.ambiente)}</span></p>`;
         } else {
-            det = `<p style="margin:6px 0;">${v.platoDestacado ? `<b>Plato:</b> ${escaparHTML(v.platoDestacado)}<br>` : ''}<b>Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span><br><b>Hospedaje:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${escaparHTML(v.transporte || '')}</p>`;
+            det = `<p style="margin:6px 0;">${v.platoDestacado ? `<b style="color:#00FA9A;">Plato:</b> ${escaparHTML(v.platoDestacado)}<br>` : ''}<b style="color:#00FA9A;">Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span><br><b style="color:#00FA9A;">Hospedaje:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${escaparHTML(v.transporte || '')}</p>`;
         }
         if (v.contacto) det += `<p style="color:#00FFFF; margin:4px 0;">📞 <b>Directorio:</b> ${escaparHTML(v.contacto)}</p>`;
 
@@ -1193,7 +1388,11 @@ window.eliminarRegistro = async (id, pL) => {
         dibujarPinesProvincia(pL);
         actualizarBadgeRango(pL);
         if (capaProvincias) capaProvincias.eachLayer(l => capaProvincias.resetStyle(l));
-        actualizarProgresoGlobal();
+        if (tituloDepartamento.innerText && btnVolver.style.display !== 'none') {
+            actualizarProgresoDepartamental(tituloDepartamento.innerText.trim().toUpperCase());
+        } else {
+            actualizarProgresoGlobal();
+        }
         mostrarToast("Registro eliminado", "success");
     } catch (e) {
         console.error("Error eliminando registro:", e);
@@ -1360,10 +1559,7 @@ function actualizarProgresoGlobal() {
     });
     let por = Math.round((vis / datosProvinciasGenerales.features.length) * 100);
     if (vis > 0 && por === 0) por = 1;
-    barraRelleno.style.width = por + '%';
-    barraRelleno.style.background = 'linear-gradient(90deg, #FF1493, #00FA9A, #FFD700)';
-    textoProgreso.innerText = por + '%';
-    mascotaProgreso.style.left = por + '%';
+    actualizarAnilloOrbe(por, por === 100);
 }
 
 function actualizarProgresoDepartamental(nD) {
@@ -1378,18 +1574,15 @@ function actualizarProgresoDepartamental(nD) {
     });
     let por = pr.length === 0 ? 0 : Math.round((vis / pr.length) * 100);
     if (vis > 0 && por === 0) por = 1;
-    barraRelleno.style.width = por + '%';
-    mascotaProgreso.style.left = por + '%';
-    if (por === 100) {
-        barraRelleno.style.background = 'linear-gradient(90deg,#FFD700,#FFF,#FFD700)';
-        textoProgreso.innerText = '¡DOMINADO!';
-        if (typeof confetti === 'function') confetti({ particleCount: 250, spread: 120, origin: { y: 0.5 }, zIndex: 10005 });
-    } else {
-        barraRelleno.style.background = 'linear-gradient(90deg,#FF1493,#00FA9A,#FFD700)';
-        textoProgreso.innerText = por + '%';
+    actualizarAnilloOrbe(por, por === 100);
+    if (por === 100 && typeof confetti === 'function') {
+        confetti({ particleCount: 250, spread: 120, origin: { y: 0.5 }, zIndex: 10005 });
     }
 }
 
+// =========================================
+// 9. RESPALDOS, BUSCADOR SPOTLIGHT Y SESIÓN
+// =========================================
 if (btnBackup) {
     btnBackup.onclick = () => {
         feedbackHaptico(12);
@@ -1434,6 +1627,32 @@ if (btnImportar && inputImportar) {
     };
 }
 
+function ejecutarBusquedaTexto(tx) {
+    if (tx.length < 2) {
+        resultadosBuscador.innerHTML = '';
+        return;
+    }
+    let h = '';
+    let c = 0;
+    Object.keys(datosViajes).forEach(p => datosViajes[p].forEach(v => {
+        const sr = `${v.nombre || ''} ${v.info || ''} ${v.estadio || ''} ${v.platoDestacado || ''} ${v.tipoProyecto || ''} ${p}`.toLowerCase();
+        if (sr.includes(tx)) {
+            const dF = datosProvinciasGenerales.features.find(x => x.properties.NOMBPROV.trim().toUpperCase() === p);
+            const nD = dF ? dF.properties.FIRST_NOMB : '';
+            const icono = v.tipo === 'TRABAJO' ? '🚜' : v.tipo === 'FUTBOL' ? '⚽' : '🍹';
+            h += `<div class="resultado-item" data-prov="${escaparHTML(p)}" data-dep="${escaparHTML(nD)}">
+                    <div>
+                        <h4>${icono} ${escaparHTML(v.nombre)} <span style="color:#FFD700; font-size:0.78rem;">(${escaparHTML(p)})</span></h4>
+                        <p>${escaparHTML(v.fecha || 'Sin fecha')} ${v.altitud ? `• Z: ${escaparHTML(v.altitud)}m` : ''}</p>
+                    </div>
+                    <span style="color:#00FFFF; font-weight:bold;">→</span>
+                  </div>`;
+            c++;
+        }
+    }));
+    resultadosBuscador.innerHTML = c === 0 ? '<p style="color:#94a3b8; text-align:center; font-size:0.8rem;">No se encontraron coincidencias.</p>' : h;
+}
+
 if (btnBuscar) {
     btnBuscar.onclick = () => { 
         feedbackHaptico(12);
@@ -1447,6 +1666,7 @@ if (btnBuscar) {
 }
 
 window.cerrarBuscador = () => { 
+    pantallaBuscador.style.transform = '';
     pantallaBuscador.classList.remove('activo'); 
     setTimeout(() => { 
         pantallaBuscador.style.display = 'none'; 
@@ -1461,27 +1681,18 @@ if (inputBuscador) {
     inputBuscador.addEventListener('input', (e) => {
         clearTimeout(temporizadorBuscador);
         const tx = e.target.value.toLowerCase().trim();
-        if (tx.length < 2) {
-            resultadosBuscador.innerHTML = '';
-            return;
+        temporizadorBuscador = setTimeout(() => ejecutarBusquedaTexto(tx), 220);
+    });
+}
+
+if (buscadorQuickTags) {
+    buscadorQuickTags.addEventListener('click', (e) => {
+        const btnTag = e.target.closest('.q-tag');
+        if (btnTag && inputBuscador) {
+            feedbackHaptico(10);
+            inputBuscador.value = btnTag.dataset.query;
+            ejecutarBusquedaTexto(btnTag.dataset.query.toLowerCase());
         }
-        temporizadorBuscador = setTimeout(() => {
-            let h = '';
-            let c = 0;
-            Object.keys(datosViajes).forEach(p => datosViajes[p].forEach(v => {
-                const sr = `${v.nombre || ''} ${v.info || ''} ${v.estadio || ''} ${v.platoDestacado || ''} ${p}`.toLowerCase();
-                if (sr.includes(tx)) {
-                    const dF = datosProvinciasGenerales.features.find(x => x.properties.NOMBPROV.trim().toUpperCase() === p);
-                    const nD = dF ? dF.properties.FIRST_NOMB : '';
-                    h += `<div class="resultado-item" data-prov="${escaparHTML(p)}" data-dep="${escaparHTML(nD)}">
-                            <h4>${escaparHTML(v.nombre)} <span style="color:#FFD700;">(${escaparHTML(p)})</span></h4>
-                            <p>${escaparHTML(v.fecha || 'Sin fecha')} ${v.altitud ? `• Z: ${escaparHTML(v.altitud)}m` : ''}</p>
-                          </div>`;
-                    c++;
-                }
-            }));
-            resultadosBuscador.innerHTML = c === 0 ? '<p style="color:#aaa; text-align:center;">No se encontraron coincidencias.</p>' : h;
-        }, 250);
     });
 }
 
@@ -1495,10 +1706,13 @@ resultadosBuscador.addEventListener('click', (e) => {
 
 window.volarAProvincia = (nP, nD) => { 
     window.cerrarBuscador(); 
-    renderizarCapaDepartamento(nD);
+    renderizarCapaDepartamento(nD, true);
     abrirInformacionProvincia(nP, coloresChichaPremium[nP.length % coloresChichaPremium.length]); 
 };
 
+// =========================================
+// 10. CONTROLADORES PRINCIPALES DE SESIÓN
+// =========================================
 if (btnIngresar) {
     btnIngresar.onclick = async () => {
         feedbackHaptico(15);
@@ -1522,7 +1736,6 @@ if (btnIngresar) {
                     pantallaCarga.style.display = 'flex';
                     contenedorMapa.style.display = 'block';
                     tituloMapa.style.display = 'block';
-                    contenedorProgreso.style.display = 'block';
                     reproducirMusicaAleatoria();
                     inicializarMapa();
                 }, 600);
@@ -1579,7 +1792,6 @@ onAuthStateChanged(auth, (u) => {
         pantallaCarga.style.display = 'flex'; 
         contenedorMapa.style.display = 'block'; 
         tituloMapa.style.display = 'block'; 
-        contenedorProgreso.style.display = 'block'; 
         inicializarMapa(); 
         if (!audioAmbiental.src) reproducirMusicaAleatoria(); 
         document.body.addEventListener('click', () => {
@@ -1591,7 +1803,7 @@ onAuthStateChanged(auth, (u) => {
         pantallaCarga.style.display = 'none'; 
         contenedorMapa.style.display = 'none'; 
         tituloMapa.style.display = 'none'; 
-        contenedorProgreso.style.display = 'none'; 
+        if (barraNavegacion) barraNavegacion.style.display = 'none';
     }
 });
 
