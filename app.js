@@ -12,6 +12,11 @@ const tarjetaContenidoInfo = document.querySelector('.info-contenido');
 const tituloInfoProvincia = document.getElementById('info-provincia-titulo');
 const rangoProvincia = document.getElementById('rango-provincia'); 
 const contenedorLugares = document.getElementById('info-lugares');
+const vistaExplorarLugares = document.getElementById('vista-explorar-lugares');
+const tabsVisitasBar = document.getElementById('tabs-visitas');
+const badgeModoCabina = document.querySelector('.cabina-badge-mode');
+const scannerChamber = document.querySelector('.scanner-chamber');
+const exifPillTag = document.querySelector('.exif-pill-tag');
 const btnCerrarInfo = document.getElementById('btn-cerrar-info');
 const pantallaCarga = document.getElementById('pantalla-carga');
 const pantallaDashboard = document.getElementById('pantalla-dashboard');
@@ -100,9 +105,16 @@ let menuRadialAbierto = false;
 
 const CIRCUNFERENCIA_ANILLO = 220; // 2 * PI * 35
 const coloresChichaPremium = [ "#FF1493", "#00FA9A", "#FFD700", "#00FFFF", "#FF4500", "#9400D3" ];
+const coloresFrecuencia = {
+    'TODOS': '#00FFFF',
+    'TRABAJO': '#FF4500',
+    'PERSONAL': '#00FA9A',
+    'FUTBOL': '#FF1493',
+    'SABOR': '#FFD700'
+};
 const audios = [ './assets/audio/musica-uno.mp3', './assets/audio/musica-dos.mp3', './assets/audio/musica-tres.mp3' ];
 const audioAmbiental = new Audio();
-const nombresFiltro = { 'TODOS': 'Filtros', 'TRABAJO': 'Trabajo', 'PERSONAL': 'Personal', 'FUTBOL': 'Fútbol', 'SABOR': 'Sabor' };
+const nombresFiltro = { 'TODOS': 'Capas', 'TRABAJO': 'Obras', 'PERSONAL': 'Rutas', 'FUTBOL': 'Tribuna', 'SABOR': 'Sabor 5★' };
 
 const desafiosNomadas = [
     "Prueba el plato o bebida más rara que encuentres en el mercado local.",
@@ -112,10 +124,10 @@ const desafiosNomadas = [
     "Encuentra una calle sin asfaltar y anota algo que te llame la atención."
 ];
 
-// 4. UTILIDADES, HÁPTICA Y EXIF
-function feedbackHaptico(ms = 12) {
+// 4. UTILIDADES, HÁPTICA PROGRESIVA, TILT 3D Y EXIF
+function feedbackHaptico(patron = 12) {
     if (navigator.vibrate) {
-        try { navigator.vibrate(ms); } catch (e) {}
+        try { navigator.vibrate(patron); } catch (e) {}
     }
 }
 
@@ -148,12 +160,36 @@ function mostrarToast(mensaje, tipo = 'success') {
     setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000); 
 }
 
+// Efecto 3D Holográfico para tarjetas Bento y Wrapped VIP
+function activarTiltHolografico(selector) {
+    document.querySelectorAll(selector).forEach(card => {
+        const aplicarRotacion = (clientX, clientY) => {
+            const rect = card.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            const rotX = ((y - rect.height / 2) / (rect.height / 2)) * -7;
+            const rotY = ((x - rect.width / 2) / (rect.width / 2)) * 7;
+            card.style.transform = `perspective(650px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) scale(1.015)`;
+        };
+        const resetearRotacion = () => {
+            card.style.transform = '';
+        };
+        card.addEventListener('mousemove', (e) => aplicarRotacion(e.clientX, e.clientY));
+        card.addEventListener('mouseleave', resetearRotacion);
+        card.addEventListener('touchmove', (e) => {
+            if (e.touches[0]) aplicarRotacion(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+        card.addEventListener('touchend', resetearRotacion);
+    });
+}
+
 function habilitarSwipeToClose(elSel, cb) {
     const el = document.querySelector(elSel);
     if (!el) return;
     let startY = 0;
     let currentY = 0;
     const esFloating = el.classList.contains('modal-floating-sheet');
+    const esSpotlight = el.classList.contains('spotlight-command-center');
 
     el.addEventListener('touchstart', (e) => {
         if (el.scrollTop <= 0) startY = e.touches[0].clientY;
@@ -163,7 +199,10 @@ function habilitarSwipeToClose(elSel, cb) {
         if (!startY) return;
         currentY = e.touches[0].clientY;
         const diffY = currentY - startY;
-        if (diffY > 0) {
+        if (esSpotlight && diffY < 0) {
+            el.style.transition = 'none';
+            el.style.transform = `translate(-50%, ${diffY}px)`;
+        } else if (!esSpotlight && diffY > 0) {
             el.style.transition = 'none';
             el.style.transform = esFloating
                 ? `translate(-50%, ${diffY}px)`
@@ -174,8 +213,8 @@ function habilitarSwipeToClose(elSel, cb) {
     el.addEventListener('touchend', () => {
         if (!startY || !currentY) return;
         const diffY = currentY - startY;
-        el.style.transition = 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)';
-        if (diffY > 110) cb();
+        el.style.transition = '';
+        if ((esSpotlight && diffY < -85) || (!esSpotlight && diffY > 110)) cb();
         else el.style.transform = '';
         startY = 0;
         currentY = 0;
@@ -183,7 +222,10 @@ function habilitarSwipeToClose(elSel, cb) {
 }
 
 function mostrarSkeletonLoading() {
-    contenedorLugares.innerHTML = `<div class="esqueleto" style="height: 85px; margin: 10px 0;"></div>`;
+    contenedorLugares.innerHTML = `
+        <div class="esqueleto" style="height: 76px; margin: 10px 0;"></div>
+        <div class="esqueleto" style="height: 76px; margin: 10px 0; opacity: 0.55;"></div>
+    `;
 }
 
 // =========================================
@@ -199,7 +241,7 @@ function actualizarAnilloOrbe(porcentaje, dominado = false) {
     if (textoProgreso) {
         textoProgreso.innerText = dominado ? '👑 100%' : `${pct}%`;
         textoProgreso.style.color = dominado ? '#00FA9A' : '#FFD700';
-        textoProgreso.style.borderColor = dominado ? '#00FA9A' : 'rgba(255, 215, 0, 0.55)';
+        textoProgreso.style.borderColor = dominado ? '#00FA9A' : 'rgba(255, 215, 0, 0.6)';
     }
 }
 
@@ -241,7 +283,7 @@ if (fondoDashboard) {
 }
 
 // =========================================
-// CONTROLES SEGMENTADOS Y METADATOS EXIF
+// CONTROLES SEGMENTADOS Y ESCÁNER LÁSER EXIF
 // =========================================
 function vincularGrupoBotones(contenedorId, inputHiddenId, claseActiva, callbackCambio = null) {
     const cont = document.getElementById(contenedorId);
@@ -302,8 +344,12 @@ async function obtenerAltitudZ(lat, lng, silencioso = false) {
 async function extraerMetadatosEXIF(file) {
     if (typeof window.exifr === 'undefined' || !file) return;
     try {
+        if (exifPillTag) exifPillTag.innerText = "🔍 ESCANEANDO...";
         const meta = await window.exifr.parse(file, { gps: true, exif: true, tiff: true });
-        if (!meta) return;
+        if (!meta) {
+            if (exifPillTag) exifPillTag.innerText = "⚡ AUTO-EXIF + Z";
+            return;
+        }
 
         let hallazgos = [];
         const fechaFoto = meta.DateTimeOriginal || meta.CreateDate;
@@ -325,7 +371,7 @@ async function extraerMetadatosEXIF(file) {
             if (capaPinTemporal) {
                 capaPinTemporal.clearLayers();
                 L.marker([tempLat, tempLng], {
-                    icon: L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [28, 28], iconAnchor: [14, 28] })
+                    icon: L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [30, 30], iconAnchor: [15, 15] })
                 }).addTo(capaPinTemporal);
             }
             hallazgos.push("GPS");
@@ -342,10 +388,18 @@ async function extraerMetadatosEXIF(file) {
         }
 
         if (hallazgos.length > 0) {
-            feedbackHaptico(20);
+            feedbackHaptico([20, 45, 35]);
+            if (scannerChamber) {
+                scannerChamber.style.borderColor = '#00FA9A';
+                scannerChamber.style.boxShadow = '0 0 25px rgba(0, 250, 154, 0.28)';
+            }
+            if (exifPillTag) exifPillTag.innerText = "✅ TELEMETRÍA OK";
             mostrarToast(`📸 EXIF: ${hallazgos.join(' • ')}`, 'success');
+        } else {
+            if (exifPillTag) exifPillTag.innerText = "⚡ AUTO-EXIF + Z";
         }
     } catch (err) {
+        if (exifPillTag) exifPillTag.innerText = "⚡ AUTO-EXIF + Z";
         console.warn("No se pudieron extraer datos EXIF:", err);
     }
 }
@@ -420,7 +474,7 @@ function comprobarEfemerides() {
 }
 
 // =========================================
-// 5. INICIALIZACIÓN MAPA Y GIS
+// 5. INICIALIZACIÓN MAPA Y DIALES TÁCTILES
 // =========================================
 function insertarTarjetaLugarSegura(htmlString) {
     contenedorLugares.insertAdjacentHTML('beforeend', htmlString);
@@ -437,14 +491,16 @@ document.querySelectorAll('.btn-opcion:not(#filtro-categoria .btn-opcion)').forE
     };
 });
 
+// Diales de estrellas con vibración háptica progresiva
 function inicializarEstrellas(id, clave) {
     const c = document.getElementById(id);
     if (!c) return;
     const s = c.querySelectorAll('span');
     s.forEach((e, idx) => {
         e.onclick = () => {
-            feedbackHaptico(12);
-            estrellasValor[clave] = idx + 1;
+            const nivel = idx + 1;
+            feedbackHaptico(nivel === 5 ? [15, 30, 25] : 8 + nivel * 4);
+            estrellasValor[clave] = nivel;
             s.forEach((x, i) => { x.classList.toggle('activa', i <= idx); });
         };
     });
@@ -464,11 +520,17 @@ function resetUIFormulario() {
     setValorGrupoBotones('seg-proyecto', 'nuevo-tipo-proyecto', 'Topografía', 'activo');
     actualizarPanelesPorTipo('PERSONAL');
 
+    if (scannerChamber) {
+        scannerChamber.style.borderColor = '';
+        scannerChamber.style.boxShadow = '';
+    }
+    if (exifPillTag) exifPillTag.innerText = "⚡ AUTO-EXIF + Z";
+
     ['1', '2'].forEach(n => {
         const prev = document.getElementById(`preview-foto-${n}`);
         const txt = document.getElementById(`txt-foto-${n}`);
         if (prev) { prev.src = ''; prev.style.display = 'none'; }
-        if (txt) txt.style.display = 'inline';
+        if (txt) txt.style.display = 'flex';
     });
 }
 
@@ -491,7 +553,7 @@ async function obtenerViajesDeFirebase() {
         });
     } catch (e) {
         console.error("Error cargando viajes de Firebase:", e);
-        mostrarToast("Error al sincronizar con la nube", "error");
+        mostrarToast("Modo Offline: Cargando caché local", "error");
     }
     return obj;
 }
@@ -506,13 +568,13 @@ function obtenerEstiloProvincia(fP) {
         hasV = filtrados.some(v => (v.estado || 'VISITADO') === 'VISITADO');
         hasW = filtrados.some(v => v.estado === 'WISHLIST');
     }
-    const opV = sateliteActivo ? 0.05 : 0.35;
-    const opW = sateliteActivo ? 0.05 : 0.15;
-    const opN = sateliteActivo ? 0.05 : 0.7;
+    const opV = sateliteActivo ? 0.14 : 0.4;
+    const opW = sateliteActivo ? 0.08 : 0.18;
+    const opN = sateliteActivo ? 0.05 : 0.8;
 
-    if (hasV) return { color: c, weight: 3, fillColor: c, fillOpacity: opV, className: 'poligono-vidrio' };
+    if (hasV) return { color: c, weight: 2.8, fillColor: c, fillOpacity: opV, className: 'poligono-vidrio' };
     else if (hasW) return { color: "#00FFFF", weight: 2, fillColor: "#00FFFF", fillOpacity: opW, className: 'poligono-wishlist' };
-    else return { color: "#444", weight: 2, fillColor: "#111", fillOpacity: opN, className: 'poligono-raspadita' };
+    else return { color: "#26354d", weight: 1.4, fillColor: "#060911", fillOpacity: opN, className: 'poligono-raspadita' };
 }
 
 function renderizarCapaDepartamento(nD, ajustarVista = true) {
@@ -576,7 +638,7 @@ function inicializarMapa() {
             tempLat = e.latlng.lat;
             tempLng = e.latlng.lng;
             capaPinTemporal.clearLayers();
-            const icon = L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [28, 28], iconAnchor: [14, 28] });
+            const icon = L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [30, 30], iconAnchor: [15, 15] });
             markerDraggable = L.marker([tempLat, tempLng], { icon: icon, draggable: true }).addTo(capaPinTemporal);
             markerDraggable.on('dragend', function(ev) {
                 tempLat = ev.target.getLatLng().lat;
@@ -626,17 +688,18 @@ function dibujarMapaNacional() {
                     else if (filt.some(v => v.estado === 'WISHLIST')) wishlist++;
                 }
             }
-            if (visitadas === provs.length && provs.length > 0) return { color: "#FFF", weight: 3, fillColor: "#FFD700", fillOpacity: 0.6, className: 'poligono-dorado' };
-            else if (visitadas > 0) return { color: coloresChichaPremium[nomD.length % coloresChichaPremium.length], weight: 3, fillColor: coloresChichaPremium[nomD.length % coloresChichaPremium.length], fillOpacity: 0.35, className: 'poligono-vidrio' }; 
-            else if (wishlist > 0) return { color: "#00FFFF", weight: 2, fillColor: "#00FFFF", fillOpacity: 0.15, className: 'poligono-wishlist' };
-            else return { color: "#555", weight: 1, fillColor: "#222", fillOpacity: 0.8, className: 'poligono-raspadita' }; 
+            const colDep = coloresChichaPremium[nomD.length % coloresChichaPremium.length];
+            if (visitadas === provs.length && provs.length > 0) return { color: "#FFFFFF", weight: 3, fillColor: "#FFD700", fillOpacity: 0.65, className: 'poligono-dorado' };
+            else if (visitadas > 0) return { color: colDep, weight: 2.6, fillColor: colDep, fillOpacity: 0.38, className: 'poligono-vidrio' }; 
+            else if (wishlist > 0) return { color: "#00FFFF", weight: 2, fillColor: "#00FFFF", fillOpacity: 0.16, className: 'poligono-wishlist' };
+            else return { color: "#26354d", weight: 1.2, fillColor: "#070b12", fillOpacity: 0.84, className: 'poligono-raspadita' }; 
         },
         onEachFeature: function (f, l) {
             l.on('click', function () {
                 feedbackHaptico(12);
                 const nD = f.properties.NOMBDEP;
-                l.setStyle({ color: "#FFFFFF", weight: 4, fillOpacity: 0.5 });
-                setTimeout(() => renderizarCapaDepartamento(nD, true), 320);
+                l.setStyle({ color: "#FFFFFF", weight: 4, fillOpacity: 0.55 });
+                setTimeout(() => renderizarCapaDepartamento(nD, true), 260);
             });
         }
     }).addTo(mapa);
@@ -662,11 +725,11 @@ if (btnCapas) {
 }
 
 // =========================================
-// 6. FILTROS, STATS SIMÉTRICO, RULETA Y WRAPPED VIP
+// 6. FILTROS CAMALEÓN, STATS 3D, RULETA Y WRAPPED VIP
 // =========================================
 document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(btn => {
     btn.onclick = () => {
-        feedbackHaptico(10);
+        feedbackHaptico(12);
         document.querySelectorAll('#filtro-categoria .btn-opcion').forEach(b => b.classList.remove('seleccionado'));
         btn.classList.add('seleccionado');
     };
@@ -694,6 +757,19 @@ if (btnFiltro) {
 if (btnCerrarFiltros) btnCerrarFiltros.onclick = window.cerrarFiltros;
 habilitarSwipeToClose('#pantalla-filtros', window.cerrarFiltros);
 
+function sincronizarLuzFrecuencia(modo) {
+    const col = coloresFrecuencia[modo] || '#FFD700';
+    if (btnFiltro) {
+        btnFiltro.style.setProperty('--sat-color', col);
+    }
+    const orbInner = document.querySelector('.orb-inner-circle');
+    if (orbInner) {
+        orbInner.style.boxShadow = modo === 'TODOS'
+            ? 'inset 0 2px 4px rgba(255, 255, 255, 0.65), 0 0 18px rgba(0, 255, 255, 0.3)'
+            : `inset 0 2px 4px rgba(255, 255, 255, 0.75), 0 0 28px ${col}`;
+    }
+}
+
 if (btnLimpiarFiltros) {
     btnLimpiarFiltros.onclick = () => {
         feedbackHaptico(12);
@@ -704,9 +780,10 @@ if (btnLimpiarFiltros) {
         filtroActualMundo = 'TODOS';
         filtroFechaInicio = null;
         filtroFechaFin = null;
-        if (labelDockFiltro) labelDockFiltro.innerText = 'Filtros';
+        if (labelDockFiltro) labelDockFiltro.innerText = 'Capas';
         btnFiltro.classList.remove('activo');
-        mostrarToast("Filtros limpios");
+        sincronizarLuzFrecuencia('TODOS');
+        mostrarToast("Frecuencia global restaurada");
         refrescarMundoLocal();
         window.cerrarFiltros();
     };
@@ -714,15 +791,16 @@ if (btnLimpiarFiltros) {
 
 if (btnAplicarFiltros) {
     btnAplicarFiltros.onclick = () => {
-        feedbackHaptico(15);
+        feedbackHaptico([14, 30, 18]);
         const cat = document.querySelector('#filtro-categoria .btn-opcion.seleccionado');
         filtroActualMundo = cat ? cat.dataset.valor : 'TODOS';
         filtroFechaInicio = inputFiltroInicio.value || null;
         filtroFechaFin = inputFiltroFin.value || null;
         const hayFiltroActivo = (filtroActualMundo !== 'TODOS' || filtroFechaInicio || filtroFechaFin);
-        if (labelDockFiltro) labelDockFiltro.innerText = nombresFiltro[filtroActualMundo] || 'Filtros';
+        if (labelDockFiltro) labelDockFiltro.innerText = nombresFiltro[filtroActualMundo] || 'Capas';
         btnFiltro.classList.toggle('activo', Boolean(hayFiltroActivo));
-        mostrarToast("Filtros aplicados al mapa");
+        sincronizarLuzFrecuencia(filtroActualMundo);
+        mostrarToast(`Capa sintonizada: ${nombresFiltro[filtroActualMundo] || 'Global'}`);
         refrescarMundoLocal();
         window.cerrarFiltros();
     };
@@ -745,7 +823,7 @@ document.querySelectorAll('.btn-tab-visita').forEach(btn => {
         btn.classList.add('activo');
         tabVisitaActiva = btn.dataset.tab;
         const nomL = tituloInfoProvincia.innerText.trim().toUpperCase();
-        const col = tituloInfoProvincia.style.webkitTextFillColor;
+        const col = tituloInfoProvincia.style.color || '#00FFFF';
         renderizarLugares(nomL, col);
     };
 });
@@ -784,6 +862,8 @@ if (btnDashboard) {
         let tP = 0;
         let tPer = 0;
         let tot = 0;
+        let cotaMax = 0;
+        let lugarCotaMax = '';
         let pVis = new Set();
         let est = [];
 
@@ -792,6 +872,11 @@ if (btnDashboard) {
                 if (pasaFiltros(v) && v.estado !== 'WISHLIST') {
                     pVis.add(prov);
                     tot++;
+                    const zNum = parseInt(v.altitud, 10);
+                    if (!isNaN(zNum) && zNum > cotaMax) {
+                        cotaMax = zNum;
+                        lugarCotaMax = v.nombre;
+                    }
                     if (v.tipo === 'TRABAJO') tP++;
                     else if (v.tipo === 'FUTBOL') { if (v.estadio) est.push(escaparHTML(v.estadio)); }
                     else tPer++;
@@ -803,61 +888,61 @@ if (btnDashboard) {
         const porc = Math.round((pVis.size / totP) * 100) || 0;
         const racha = calcRacha();
 
-        // Grilla Bento cuadrada, limpia y simétrica
         contenidoDashboard.innerHTML = `
-            <div class="bento-item bento-full" style="border-color:rgba(0,255,255,0.38);">
+            <div class="bento-item bento-full" style="border-color:rgba(0,255,255,0.4);">
                 <div class="bento-top-row">
-                    <span class="bento-titulo" style="color:#00FFFF;">Avance Territorial</span>
-                    <span class="bento-valor" style="color:#00FFFF; font-size:1.35rem;">${porc}%</span>
+                    <span class="bento-titulo" style="color:#00FFFF;">DOMINIO TERRITORIAL</span>
+                    <span class="bento-valor" style="color:#00FFFF; font-size:1.4rem;">${porc}%</span>
                 </div>
                 <div class="bento-bar-mini"><div class="bento-bar-fill" style="width:${porc}%;"></div></div>
-                <div class="bento-sub">Has conquistado <b>${pVis.size}</b> de <b>${totP}</b> provincias del Perú</div>
+                <div class="bento-sub">Has conquistado <b>${pVis.size}</b> de <b>${totP}</b> provincias (${tot} registros)</div>
             </div>
 
-            <div class="bento-item" style="border-left:4px solid #FFD700;">
+            <div class="bento-item" style="border-left:3.5px solid #FFD700;">
                 <div class="bento-top-row">
-                    <span class="bento-titulo">Racha Activa</span>
+                    <span class="bento-titulo">RACHA ACTIVA</span>
                     <span>${racha > 0 ? '🔥' : '🧊'}</span>
                 </div>
                 <div class="bento-valor" style="color:#FFD700;">${racha}</div>
-                <div class="bento-sub">Meses seguidos</div>
+                <div class="bento-sub">Meses continuos</div>
             </div>
 
-            <div class="bento-item" style="border-left:4px solid #FF4500;">
+            <div class="bento-item" style="border-left:3.5px solid #00FA9A;">
                 <div class="bento-top-row">
-                    <span class="bento-titulo">Proyectos</span>
+                    <span class="bento-titulo">TECHO Z MÁX</span>
+                    <span>⛰️</span>
+                </div>
+                <div class="bento-valor" style="color:#00FA9A;">${cotaMax > 0 ? cotaMax + 'm' : 'N/A'}</div>
+                <div class="bento-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${lugarCotaMax ? escaparHTML(lugarCotaMax) : 'Sin cota registrada'}</div>
+            </div>
+
+            <div class="bento-item" style="border-left:3.5px solid #FF4500;">
+                <div class="bento-top-row">
+                    <span class="bento-titulo">OBRAS & GEO</span>
                     <span>🚜</span>
                 </div>
                 <div class="bento-valor" style="color:#FF4500;">${tP}</div>
-                <div class="bento-sub">Obras & Campo</div>
+                <div class="bento-sub">Proyectos campo</div>
             </div>
 
-            <div class="bento-item" style="border-left:4px solid #00FA9A;">
+            <div class="bento-item" style="border-left:3.5px solid #FF1493;">
                 <div class="bento-top-row">
-                    <span class="bento-titulo">Personales</span>
+                    <span class="bento-titulo">RUTAS LIBRES</span>
                     <span>🍹</span>
                 </div>
-                <div class="bento-valor" style="color:#00FA9A;">${tPer}</div>
-                <div class="bento-sub">Viajes & Rutas</div>
+                <div class="bento-valor" style="color:#FF1493;">${tPer}</div>
+                <div class="bento-sub">Viajes personales</div>
             </div>
 
-            <div class="bento-item" style="border-left:4px solid #FF1493;">
+            <div class="bento-item bento-full" style="border-color:rgba(255,255,255,0.14);">
                 <div class="bento-top-row">
-                    <span class="bento-titulo">Registros</span>
-                    <span>📍</span>
-                </div>
-                <div class="bento-valor" style="color:#FF1493;">${tot}</div>
-                <div class="bento-sub">Bitácoras totales</div>
-            </div>
-
-            <div class="bento-item bento-full" style="border-color:rgba(255,255,255,0.16);">
-                <div class="bento-top-row">
-                    <span class="bento-titulo">Estadios & Canchas Visitadas</span>
+                    <span class="bento-titulo">ESTADIOS & CANCHAS CONQUISTADAS</span>
                     <span class="bento-valor" style="color:#FFF; font-size:1.1rem;">${est.length} ⚽</span>
                 </div>
                 <div class="bento-sub" style="color:#e2e8f0; margin-top:4px;">${est.join(' • ') || 'Aún no hay canchas registradas.'}</div>
             </div>
         `;
+        activarTiltHolografico('#contenido-dashboard .bento-item');
         fondoDashboard.style.display = 'block';
         fondoDashboard.style.zIndex = '9999';
         pantallaDashboard.style.display = 'block';
@@ -870,7 +955,7 @@ if (btnDashboard) {
 // =========================================
 if (btnRuleta) {
     btnRuleta.onclick = () => {
-        feedbackHaptico(25);
+        feedbackHaptico([20, 40, 20]);
         if (!datosProvinciasGenerales) return;
 
         let candidatas = [];
@@ -891,7 +976,6 @@ if (btnRuleta) {
             window.cerrarDashboard();
             mostrarToast(`🎲 ¡Rumbo a ${elegida.prov} (${elegida.dep})!`, 'success');
 
-            // Renderizar el departamento sin salto brusco y volar suavemente a la provincia sorteada
             renderizarCapaDepartamento(elegida.dep, false);
 
             let capaObjetivo = null;
@@ -905,7 +989,6 @@ if (btnRuleta) {
 
             if (capaObjetivo) {
                 mapa.flyToBounds(capaObjetivo.getBounds(), { padding: [45, 45], maxZoom: 9.5, duration: 1.4 });
-                // Destello dorado para resaltar dónde queda en el mapa
                 capaObjetivo.setStyle({ color: "#FFD700", weight: 5, fillColor: "#00FFFF", fillOpacity: 0.55 });
                 setTimeout(() => {
                     const col = coloresChichaPremium[elegida.prov.length % coloresChichaPremium.length];
@@ -921,7 +1004,7 @@ if (btnRuleta) {
 }
 
 // =========================================
-// NUEVO WRAPPED VIAJERO (TARJETA VIP)
+// WRAPPED VIAJERO (CREDENCIAL HOLOGRÁFICA 3D)
 // =========================================
 window.cerrarWrapped = () => {
     const modalW = document.getElementById('modal-wrapped');
@@ -962,7 +1045,7 @@ if (btnWrapped) {
 
         document.getElementById('wrapped-content').innerHTML = `
             <div class="wrapped-aura-box">
-                <div class="wrapped-aura-label">Tu Aura Viajera del Año</div>
+                <div class="wrapped-aura-label">RANGO OPERATIVO DEL AÑO</div>
                 <div class="wrapped-aura-val">${aura}</div>
             </div>
 
@@ -994,6 +1077,7 @@ if (btnWrapped) {
             </div>
         `;
 
+        activarTiltHolografico('.wrapped-vip-card');
         const modalW = document.getElementById('modal-wrapped');
         modalW.style.display = 'flex';
         setTimeout(() => { modalW.style.opacity = '1'; }, 10);
@@ -1015,7 +1099,7 @@ habilitarSwipeToClose('.info-contenido', () => { if (btnCerrarInfo) btnCerrarInf
 habilitarSwipeToClose('#visor-fotos', () => { if (window.cerrarVisorFotos) window.cerrarVisorFotos(); });
 
 // =========================================
-// 7. GENERADOR POSTAL INSTAGRAM
+// 7. GENERADOR POSTAL INSTAGRAM (CON COTA Z)
 // =========================================
 window.generarPostalIG = async (id, prov) => {
     feedbackHaptico(15);
@@ -1027,11 +1111,14 @@ window.generarPostalIG = async (id, prov) => {
     const imgEl = document.getElementById('post-img');
     const urlImg = v.foto1 || v.foto2 || './assets/img/fondo.jpg';
 
-    document.getElementById('post-desc').innerText = v.tipo === 'TRABAJO'
-        ? `Proyecto: ${v.tipoProyecto || 'Campo'} ${v.clima || ''}`
+    const cotaTxt = v.altitud ? ` • ⛰️ ${v.altitud} msnm` : '';
+    const baseDesc = v.tipo === 'TRABAJO'
+        ? `🚜 ${v.tipoProyecto || 'Campo'} ${v.clima || ''}`
         : v.tipo === 'FUTBOL'
-            ? `Estadio: ${v.estadio || ''}`
-            : `Puntaje Gastro: ★ ${v.gastro || 'N/A'}`;
+            ? `⚽ ${v.estadio || 'Estadio'}`
+            : `🍹 Gastro ★${v.gastro || 5}`;
+
+    document.getElementById('post-desc').innerText = `${baseDesc}${cotaTxt}`;
 
     const panel = document.getElementById('postal-generador');
     try {
@@ -1041,7 +1128,7 @@ window.generarPostalIG = async (id, prov) => {
             imgEl.src = urlImg;
         });
         const canvas = await html2canvas(panel, { scale: 1, useCORS: true, allowTaint: false, logging: false });
-        const url = canvas.toDataURL("image/jpeg", 0.9);
+        const url = canvas.toDataURL("image/jpeg", 0.92);
         const a = document.createElement('a');
         a.href = url;
         a.download = `PeruGo_Story_${v.nombre.replace(/\s+/g, '_')}.jpg`;
@@ -1054,7 +1141,7 @@ window.generarPostalIG = async (id, prov) => {
 };
 
 // =========================================
-// 8. CRUD Y GEOLOCALIZACIÓN Z
+// 8. CRUD, BOLETO DE EXPEDICIÓN Y TELEMETRÍA Z
 // =========================================
 document.getElementById('btn-gps').onclick = (e) => {
     e.preventDefault();
@@ -1077,7 +1164,7 @@ document.getElementById('btn-gps').onclick = (e) => {
         if (txtBtn) txtBtn.innerText = "Capturar GPS";
         capaPinTemporal.clearLayers();
         L.marker([tempLat, tempLng], {
-            icon: L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [28, 28], iconAnchor: [14, 28] })
+            icon: L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [30, 30], iconAnchor: [15, 15] })
         }).addTo(capaPinTemporal);
     }, () => {
         mostrarToast("No se pudo obtener ubicación GPS", "error");
@@ -1092,7 +1179,7 @@ document.getElementById('btn-ubicar-mapa').onclick = (e) => {
     seleccionandoUbicacion = true;
     markerDraggable = null;
     document.getElementById('btn-confirmar-ubicacion').style.display = 'block';
-    mostrarToast("Toca el mapa para colocar el chinche 📌", "success");
+    mostrarToast("Toca el mapa para fijar la coordenada 📌", "success");
 };
 
 document.getElementById('btn-confirmar-ubicacion').onclick = async () => {
@@ -1119,7 +1206,7 @@ document.getElementById('nueva-coordenada').addEventListener('change', async (e)
             tempLng = lng;
             capaPinTemporal.clearLayers();
             L.marker([tempLat, tempLng], {
-                icon: L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [28, 28], iconAnchor: [14, 28] })
+                icon: L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [30, 30], iconAnchor: [15, 15] })
             }).addTo(capaPinTemporal);
             await obtenerAltitudZ(tempLat, tempLng);
         }
@@ -1131,11 +1218,19 @@ function dibujarPinesProvincia(nom) {
     const lg = datosViajes[nom] || [];
     lg.forEach(v => {
         if (pasaFiltros(v) && v.lat && v.lng) {
-            const iconoPin = v.estado === 'WISHLIST' ? '⭐' : v.tipo === 'TRABAJO' ? '🚜' : v.tipo === 'FUTBOL' ? '⚽' : '🍹';
+            const esWish = v.estado === 'WISHLIST';
+            const iconoPin = esWish ? '⭐' : v.tipo === 'TRABAJO' ? '🚜' : v.tipo === 'FUTBOL' ? '⚽' : '🍹';
+            const colBorde = esWish ? '#FFD700' : v.tipo === 'TRABAJO' ? '#FF4500' : v.tipo === 'FUTBOL' ? '#FF1493' : '#00FA9A';
+
             L.marker([v.lat, v.lng], {
-                icon: L.divIcon({ className: 'chinche-premium', html: iconoPin, iconSize: [28, 28], iconAnchor: [14, 28] })
+                icon: L.divIcon({
+                    className: 'chinche-premium',
+                    html: `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;border:1.5px solid ${colBorde};box-shadow:0 0 10px ${colBorde}80;">${iconoPin}</span>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                })
             }).bindTooltip(
-                `<b>${escaparHTML(v.nombre)}</b><br><span style="font-size:0.7rem;color:#00FA9A;">Z: ${v.altitud ? escaparHTML(v.altitud) + ' msnm' : 'N/A'}</span>`,
+                `<b>${escaparHTML(v.nombre)}</b><br><span style="font-size:0.7rem;color:#00FA9A;font-family:'Fira Code',monospace;">⛰️ Z: ${v.altitud ? escaparHTML(v.altitud) + ' msnm' : 'N/A'}</span>`,
                 { direction: 'top', className: 'tooltip-chinche' }
             ).addTo(capaPinesProvincia);
         }
@@ -1150,15 +1245,31 @@ function actualizarBadgeRango(nomL) {
     else if (numVisitas >= 5) txtRango = "☕ Caserito";
     else if (numVisitas >= 3) txtRango = "🤝 Conocido";
     else if (numVisitas >= 1) txtRango = "🎒 Forastero";
-    if (rangoProvincia) rangoProvincia.innerText = `${txtRango} • ${numVisitas}`;
+    if (rangoProvincia) rangoProvincia.innerText = `${txtRango} // ${numVisitas}`;
+}
+
+function alternarModoCabina(abrirCabina, modoTexto = 'TICKET // NUEVO') {
+    if (abrirCabina) {
+        if (vistaExplorarLugares) vistaExplorarLugares.style.display = 'none';
+        if (tabsVisitasBar) tabsVisitasBar.style.display = 'none';
+        if (badgeModoCabina) badgeModoCabina.innerText = modoTexto;
+        if (btnCancelarEdicion) btnCancelarEdicion.style.display = 'inline-flex';
+        formRegistro.style.display = 'block';
+        if (tarjetaContenidoInfo) tarjetaContenidoInfo.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        formRegistro.style.display = 'none';
+        if (vistaExplorarLugares) vistaExplorarLugares.style.display = 'flex';
+        if (tabsVisitasBar) tabsVisitasBar.style.display = 'flex';
+    }
 }
 
 function abrirInformacionProvincia(nomOri, col) {
     const nomL = nomOri.trim().toUpperCase();
     tituloInfoProvincia.innerText = nomOri;
-    tarjetaContenidoInfo.style.borderColor = col;
-    tarjetaContenidoInfo.style.boxShadow = `0 25px 60px rgba(0,0,0,0.9), 0 0 25px ${col}33`;
-    tituloInfoProvincia.style.webkitTextFillColor = col;
+    tituloInfoProvincia.style.color = col;
+    tituloInfoProvincia.style.textShadow = `0 0 18px ${col}66`;
+    tarjetaContenidoInfo.style.borderTopColor = col;
+    tarjetaContenidoInfo.style.boxShadow = `0 -15px 55px rgba(0,0,0,0.95), 0 -3px 25px ${col}33`;
     limpiarFormulario(); 
     
     tabVisitaActiva = 'TODAS';
@@ -1172,9 +1283,12 @@ function abrirInformacionProvincia(nomOri, col) {
 
     pantallaInfo.style.display = 'flex';
     tarjetaContenidoInfo.style.transform = '';
-    setTimeout(() => renderizarLugares(nomL, col), 260);
+    setTimeout(() => renderizarLugares(nomL, col), 200);
 }
 
+// =========================================
+// TARJETAS DE BITÁCORA: PASAPORTE NEO-TECH
+// =========================================
 function renderizarLugares(nomL, col) {
     contenedorLugares.innerHTML = ''; 
     let lug = (datosViajes[nomL] || []).filter(pasaFiltros);
@@ -1186,9 +1300,10 @@ function renderizarLugares(nomL, col) {
     if (lug.length === 0) {
         return insertarTarjetaLugarSegura(`
             <div class="timeline-item">
-                <div class="card-visual" style="border-left: 4px solid #FF4500;">
-                    <div class="card-content">
-                        <h3 class="card-title" style="color:#FF6347; font-size:0.88rem;">📍 Sin expediciones en esta categoría</h3>
+                <div class="card-visual" style="border-left: 3.5px solid #FF4500;">
+                    <div class="card-content" style="text-align:center; padding: 18px 14px;">
+                        <h3 class="card-title" style="color:#cbd5e1; font-size:0.86rem; white-space:normal;">📍 SIN REGISTROS EN ESTA FRECUENCIA</h3>
+                        <p style="margin:4px 0 0; font-size:0.72rem; color:#94a3b8;">Emite tu primer pase de expedición con el botón inferior.</p>
                     </div>
                 </div>
             </div>
@@ -1200,7 +1315,37 @@ function renderizarLugares(nomL, col) {
     lug.forEach(v => {
         const fotoFondo = v.foto1 || v.foto2 || '';
         const bgImg = fotoFondo ? `<div class="card-bg" style="background-image: url('${escaparHTML(fotoFondo)}');"></div>` : '';
-        const textColor = bgImg ? "#FFF" : col;
+        const est = v.estado || 'VISITADO';
+        const vTipo = v.tipo || 'PERSONAL';
+
+        const colCat = est === 'WISHLIST'
+            ? '#FFD700'
+            : vTipo === 'TRABAJO'
+                ? '#FF4500'
+                : vTipo === 'FUTBOL'
+                    ? '#FF1493'
+                    : '#00FA9A';
+
+        const iconoCat = est === 'WISHLIST'
+            ? '⭐'
+            : vTipo === 'TRABAJO'
+                ? '🚜'
+                : vTipo === 'FUTBOL'
+                    ? '⚽'
+                    : '🍹';
+
+        const thumbHTML = fotoFondo
+            ? `<img src="${escaparHTML(fotoFondo)}" class="pasaporte-thumb" style="border-color:${colCat};" alt="Miniatura">`
+            : `<div class="pasaporte-thumb" style="border-color:${colCat}; box-shadow: inset 0 0 12px ${colCat}26;">${iconoCat}</div>`;
+
+        const valEstrellaPrincipal = vTipo === 'TRABAJO' ? (v.empresa || 0) : vTipo === 'FUTBOL' ? (v.ambiente || 0) : (v.gastro || v.atrac || 0);
+        const badgeEstrellaPortada = valEstrellaPrincipal > 0
+            ? `<span style="color:#FFD700; font-weight:700;">★${valEstrellaPrincipal}</span>`
+            : '';
+
+        const badgeZPortada = v.altitud
+            ? `<span class="badge-z-pill">⛰️ ${escaparHTML(v.altitud)}m</span>`
+            : '';
 
         let fH = '';
         if (v.foto1 || v.foto2) {
@@ -1209,26 +1354,26 @@ function renderizarLugares(nomL, col) {
                 ${v.foto2 ? `<img src="${escaparHTML(v.foto2)}" class="foto-viaje" data-visor="${escaparHTML(v.foto2)}">` : ''}
             </div>`;
         }
-        const est = v.estado || 'VISITADO'; 
+
         const tT = est === 'WISHLIST'
             ? '<span class="tag-info tag-wishlist">⭐ Wishlist</span>'
-            : v.tipo === 'TRABAJO'
+            : vTipo === 'TRABAJO'
                 ? '<span class="tag-info tag-trabajo">🚜 Trabajo</span>'
-                : v.tipo === 'FUTBOL'
+                : vTipo === 'FUTBOL'
                     ? '<span class="tag-info tag-futbol">⚽ Fútbol</span>'
                     : '<span class="tag-info tag-personal">🍹 Personal</span>';
 
         const s = (n) => '★'.repeat(n || 0) + '<span style="color:rgba(255,255,255,0.2);">' + '★'.repeat(5 - (n || 0)) + '</span>';
 
         let det = '';
-        if (v.tipo === 'TRABAJO') {
+        if (vTipo === 'TRABAJO') {
             det = `<p style="margin:6px 0;">${v.tipoProyecto ? `<b style="color:#00FFFF;">Especialidad:</b> ${escaparHTML(v.tipoProyecto)}<br>` : ''}<b style="color:#00FFFF;">Contratista:</b> <span style="color:#FFD700;">${s(v.empresa)}</span> ${escaparHTML(v.clima || '')}</p>`;
-        } else if (v.tipo === 'FUTBOL') {
+        } else if (vTipo === 'FUTBOL') {
             det = `<p style="margin:6px 0;">${v.estadio ? `<b style="color:#00FFFF;">Estadio:</b> ${escaparHTML(v.estadio)}<br>` : ''}${v.partido ? `<b style="color:#00FFFF;">Partido:</b> ${escaparHTML(v.partido)}<br>` : ''}<b style="color:#00FFFF;">Ambiente:</b> <span style="color:#FFD700;">${s(v.ambiente)}</span></p>`;
         } else {
-            det = `<p style="margin:6px 0;">${v.platoDestacado ? `<b style="color:#00FA9A;">Plato:</b> ${escaparHTML(v.platoDestacado)}<br>` : ''}<b style="color:#00FA9A;">Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span><br><b style="color:#00FA9A;">Hospedaje:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${escaparHTML(v.transporte || '')}</p>`;
+            det = `<p style="margin:6px 0;">${v.platoDestacado ? `<b style="color:#00FA9A;">Recomendado:</b> ${escaparHTML(v.platoDestacado)}<br>` : ''}<b style="color:#00FA9A;">Gastro:</b> <span style="color:#FFD700;">${s(v.gastro)}</span> • <b style="color:#00FA9A;">Hosp:</b> <span style="color:#FFD700;">${s(v.hosp)}</span> ${escaparHTML(v.transporte || '')}</p>`;
         }
-        if (v.contacto) det += `<p style="color:#00FFFF; margin:4px 0;">📞 <b>Directorio:</b> ${escaparHTML(v.contacto)}</p>`;
+        if (v.contacto) det += `<p style="color:#00FFFF; margin:4px 0;">📞 <b>Contacto:</b> ${escaparHTML(v.contacto)}</p>`;
 
         const footerAcciones = `
             <div class="card-action-footer">
@@ -1249,20 +1394,27 @@ function renderizarLugares(nomL, col) {
         
         insertarTarjetaLugarSegura(`
             <div class="timeline-item">
-                <div class="card-visual" style="${bgImg ? '' : `border-left: 4px solid ${col};`}">
+                <div class="card-visual" style="border-left: 3.5px solid ${colCat};">
                     ${bgImg}
                     <div class="card-content">
                         <div class="card-header" data-acordeon="${escaparHTML(v.id)}">
-                            <div>
-                                <h3 class="card-title" style="color: ${textColor};">${escaparHTML(v.nombre)}</h3>
-                                <span class="card-date">${escaparHTML(v.fecha || 'Sin fecha')} ${v.altitud ? `• Z: ${escaparHTML(v.altitud)}m` : ''}</span>
+                            <div class="pasaporte-left">
+                                ${thumbHTML}
+                                <div class="pasaporte-info">
+                                    <h3 class="card-title">${escaparHTML(v.nombre)}</h3>
+                                    <div class="card-date">
+                                        <span>${escaparHTML(v.fecha || 'Sin fecha')}</span>
+                                        ${badgeZPortada}
+                                        ${badgeEstrellaPortada}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flecha-acordeon" id="flecha-${escaparHTML(v.id)}" style="color: ${textColor};">▼</div>
+                            <div class="flecha-acordeon" id="flecha-${escaparHTML(v.id)}">▼</div>
                         </div>
                         <div class="tarjeta-body" id="body-${escaparHTML(v.id)}">
                             <div style="margin-bottom:6px;">${tT} <span class="tag-info tag-compania">${escaparHTML(v.compania || 'Solo')}</span></div>
                             ${det}
-                            ${v.info ? `<p style="margin-top:8px; line-height:1.4;"><em>${escaparHTML(v.info)}</em></p>` : ''}
+                            ${v.info ? `<p style="margin-top:8px; line-height:1.45; color:#f1f5f9;"><em>"${escaparHTML(v.info)}"</em></p>` : ''}
                             ${fH}
                             ${footerAcciones}
                         </div>
@@ -1303,15 +1455,13 @@ function limpiarFormulario() {
         const el = document.getElementById(i);
         if (el) el.value = '';
     }); 
-    const t1 = document.getElementById('txt-foto-1');
-    if (t1) t1.innerText = '📷 Foto 1 (Lee GPS)';
     tempLat = null;
     tempLng = null;
     markerDraggable = null; 
     if (capaPinTemporal) capaPinTemporal.clearLayers(); 
-    if (btnGuardarRegistro) btnGuardarRegistro.innerHTML = '💾 Guardar Expedición'; 
+    if (btnGuardarRegistro) btnGuardarRegistro.innerHTML = '💾 SELLAR EXPEDICIÓN'; 
     if (btnCancelarEdicion) btnCancelarEdicion.style.display = 'none'; 
-    if (formRegistro) formRegistro.style.display = 'none'; 
+    alternarModoCabina(false);
 }
 
 window.prepararEdicion = (id, pL) => {
@@ -1352,7 +1502,7 @@ window.prepararEdicion = (id, pL) => {
     capaPinTemporal.clearLayers();
     if (tempLat && tempLng) {
         L.marker([tempLat, tempLng], {
-            icon: L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [28, 28], iconAnchor: [14, 28] })
+            icon: L.divIcon({ className: 'chinche-premium', html: '📍', iconSize: [30, 30], iconAnchor: [15, 15] })
         }).addTo(capaPinTemporal);
     }
 
@@ -1371,10 +1521,8 @@ window.prepararEdicion = (id, pL) => {
         if (v.hosp) document.querySelectorAll('#estrellas-hosp span')[v.hosp - 1]?.click();
         if (v.atrac) document.querySelectorAll('#estrellas-atrac span')[v.atrac - 1]?.click();
     }
-    btnGuardarRegistro.innerHTML = '🔄 Actualizar';
-    btnCancelarEdicion.style.display = 'inline-flex';
-    formRegistro.style.display = 'block';
-    formRegistro.scrollIntoView({ behavior: "smooth" });
+    btnGuardarRegistro.innerHTML = '🔄 ACTUALIZAR TICKET';
+    alternarModoCabina(true, 'TICKET // EDICIÓN');
 };
 
 if (btnCancelarEdicion) btnCancelarEdicion.onclick = limpiarFormulario;
@@ -1384,7 +1532,7 @@ window.eliminarRegistro = async (id, pL) => {
     try {
         await deleteDoc(doc(db, "viajes", id));
         datosViajes[pL] = (datosViajes[pL] || []).filter(v => v.id !== id);
-        renderizarLugares(pL, tituloInfoProvincia.style.webkitTextFillColor);
+        renderizarLugares(pL, tituloInfoProvincia.style.color || '#00FFFF');
         dibujarPinesProvincia(pL);
         actualizarBadgeRango(pL);
         if (capaProvincias) capaProvincias.eachLayer(l => capaProvincias.resetStyle(l));
@@ -1402,15 +1550,15 @@ window.eliminarRegistro = async (id, pL) => {
 
 if (btnMostrarFormulario) {
     btnMostrarFormulario.onclick = () => {
-        feedbackHaptico(12);
-        if (formRegistro.style.display === 'block' && idEdicionActual) limpiarFormulario();
-        else formRegistro.style.display = formRegistro.style.display === 'none' ? 'block' : 'none';
+        feedbackHaptico(14);
+        limpiarFormulario();
+        alternarModoCabina(true, 'TICKET // NUEVO');
     };
 }
 
 if (btnGuardarRegistro) {
     btnGuardarRegistro.onclick = async () => {
-        feedbackHaptico(18);
+        feedbackHaptico([18, 35, 25]);
         const est = document.getElementById('nuevo-estado').value;
         const tp = document.getElementById('nuevo-tipo').value;
         const co = document.getElementById('nueva-compania').value;
@@ -1443,8 +1591,14 @@ if (btnGuardarRegistro) {
                 }
             }
 
-            if (f1) u1 = await comprimirYSubirImagen(f1);
-            if (f2) u2 = await comprimirYSubirImagen(f2);
+            if (f1) {
+                try { u1 = await comprimirYSubirImagen(f1); }
+                catch (errFoto) { mostrarToast("Sin red para Foto 1: Guardando telemetría offline", "error"); }
+            }
+            if (f2) {
+                try { u2 = await comprimirYSubirImagen(f2); }
+                catch (errFoto) { mostrarToast("Sin red para Foto 2: Guardando telemetría offline", "error"); }
+            }
 
             const cM = document.getElementById('nueva-coordenada').value.trim();
             if (cM) {
@@ -1493,16 +1647,24 @@ if (btnGuardarRegistro) {
             }
 
             if (idEdicionActual) {
-                await updateDoc(doc(db, "viajes", idEdicionActual), rD);
+                const docRef = doc(db, "viajes", idEdicionActual);
+                await Promise.race([
+                    updateDoc(docRef, rD),
+                    new Promise(res => setTimeout(res, navigator.onLine ? 8000 : 450))
+                ]);
                 const idx = datosViajes[pA].findIndex(v => v.id === idEdicionActual);
                 if (idx !== -1) datosViajes[pA][idx] = { id: idEdicionActual, ...rD };
-                mostrarToast("Expedición actualizada");
+                mostrarToast("Pase de expedición actualizado");
             } else {
-                const dR = await addDoc(collection(db, "viajes"), rD);
-                rD.id = dR.id;
+                const nuevoDocRef = doc(collection(db, "viajes"));
+                await Promise.race([
+                    setDoc(nuevoDocRef, rD),
+                    new Promise(res => setTimeout(res, navigator.onLine ? 8000 : 450))
+                ]);
+                rD.id = nuevoDocRef.id;
                 if (!datosViajes[pA]) datosViajes[pA] = [];
                 datosViajes[pA].push(rD);
-                mostrarToast("Expedición guardada");
+                mostrarToast("Expedición sellada con éxito");
             }
             
             if (esPrimeraVisita) {
@@ -1511,7 +1673,7 @@ if (btnGuardarRegistro) {
             }
 
             actualizarBadgeRango(pA);
-            renderizarLugares(pA, tituloInfoProvincia.style.webkitTextFillColor);
+            renderizarLugares(pA, tituloInfoProvincia.style.color || '#00FFFF');
             dibujarPinesProvincia(pA);
             if (capaProvincias) capaProvincias.eachLayer(l => capaProvincias.resetStyle(l));
             if (tituloDepartamento.innerText && btnVolver.style.display !== 'none') {
@@ -1522,7 +1684,7 @@ if (btnGuardarRegistro) {
             limpiarFormulario(); 
         } catch (e) {
             console.error("Error guardando el registro:", e);
-            mostrarToast("Error al guardar. Verifica tu conexión o las fotos.", "error");
+            mostrarToast("Error al guardar. Verifica tus datos.", "error");
         } finally {
             btnGuardarRegistro.disabled = false;
             mensajeCarga.style.display = 'none';
@@ -1642,15 +1804,15 @@ function ejecutarBusquedaTexto(tx) {
             const icono = v.tipo === 'TRABAJO' ? '🚜' : v.tipo === 'FUTBOL' ? '⚽' : '🍹';
             h += `<div class="resultado-item" data-prov="${escaparHTML(p)}" data-dep="${escaparHTML(nD)}">
                     <div>
-                        <h4>${icono} ${escaparHTML(v.nombre)} <span style="color:#FFD700; font-size:0.78rem;">(${escaparHTML(p)})</span></h4>
-                        <p>${escaparHTML(v.fecha || 'Sin fecha')} ${v.altitud ? `• Z: ${escaparHTML(v.altitud)}m` : ''}</p>
+                        <h4>${icono} ${escaparHTML(v.nombre)} <span style="color:#FFD700; font-size:0.75rem;">[${escaparHTML(p)}]</span></h4>
+                        <p>${escaparHTML(v.fecha || 'Sin fecha')} ${v.altitud ? `• ⛰️ Z: ${escaparHTML(v.altitud)}m` : ''}</p>
                     </div>
-                    <span style="color:#00FFFF; font-weight:bold;">→</span>
+                    <span style="color:#00FFFF; font-weight:bold; font-family:'Fira Code',monospace;">→</span>
                   </div>`;
             c++;
         }
     }));
-    resultadosBuscador.innerHTML = c === 0 ? '<p style="color:#94a3b8; text-align:center; font-size:0.8rem;">No se encontraron coincidencias.</p>' : h;
+    resultadosBuscador.innerHTML = c === 0 ? '<p style="color:#94a3b8; text-align:center; font-size:0.78rem; font-family:\'Fira Code\',monospace;">SIN COINCIDENCIAS EN EL RADAR</p>' : h;
 }
 
 if (btnBuscar) {
@@ -1660,8 +1822,10 @@ if (btnBuscar) {
         fondoDashboard.style.display = 'block'; 
         fondoDashboard.style.zIndex = '9999';
         pantallaBuscador.style.display = 'block'; 
-        setTimeout(() => pantallaBuscador.classList.add('activo'), 10); 
-        inputBuscador.focus(); 
+        setTimeout(() => {
+            pantallaBuscador.classList.add('activo');
+            inputBuscador.focus();
+        }, 15); 
     };
 }
 
@@ -1673,7 +1837,7 @@ window.cerrarBuscador = () => {
         fondoDashboard.style.display = 'none'; 
         inputBuscador.value = ''; 
         resultadosBuscador.innerHTML = ''; 
-    }, 350); 
+    }, 320); 
 };
 habilitarSwipeToClose('#pantalla-buscador', window.cerrarBuscador);
 
@@ -1681,7 +1845,7 @@ if (inputBuscador) {
     inputBuscador.addEventListener('input', (e) => {
         clearTimeout(temporizadorBuscador);
         const tx = e.target.value.toLowerCase().trim();
-        temporizadorBuscador = setTimeout(() => ejecutarBusquedaTexto(tx), 220);
+        temporizadorBuscador = setTimeout(() => ejecutarBusquedaTexto(tx), 180);
     });
 }
 

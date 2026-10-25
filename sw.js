@@ -1,9 +1,10 @@
-const CACHE_NAME = 'perugo-cache-v7.2';
+const CACHE_NAME = 'perugo-cache-v9.0';
 const urlsToCache = [
     './',
     './index.html',
     './style.css',
     './app.js',
+    './firebase.js',
     './manifest.json',
     './data/peru_departamental_simple.geojson',
     './data/peru_provincial_simple.geojson',
@@ -37,12 +38,11 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // 1. Ignorar métodos que no sean GET (como POST a ImgBB o Firestore)
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
 
-    // 2. No cachear llamadas a APIs dinámicas externas
+    // Excluir APIs dinámicas (Firestore maneja su propio IndexedDB local)
     const dominiosExcluidos = [
         'firestore.googleapis.com',
         'identitytoolkit.googleapis.com',
@@ -52,9 +52,10 @@ self.addEventListener('fetch', event => {
     ];
     if (dominiosExcluidos.some(d => url.hostname.includes(d))) return;
 
-    // 3. Estrategia Stale-While-Revalidate ignorando query strings de versión (?v=21)
+    const esMismoOrigen = url.origin === self.location.origin;
+
     event.respondWith(
-        caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
+        caches.match(event.request, { ignoreSearch: esMismoOrigen }).then(cachedResponse => {
             const fetchPromise = fetch(event.request).then(networkResponse => {
                 if (networkResponse && networkResponse.status === 200) {
                     const responseClone = networkResponse.clone();
